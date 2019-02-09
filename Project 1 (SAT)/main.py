@@ -4,7 +4,8 @@ import sys
 import argparse
 
 
-def main((strategy, input_fpath)):
+def main(strategy_config):
+    (strategy, input_fpath) = strategy_config
     dp = DavisPutnam(strategy, input_fpath)
 
 
@@ -26,7 +27,7 @@ if __name__ == '__main__':
 
     def get_strategy(args):
         for strategy, input_fpath in vars(args):
-            if filepath:
+            if input_fpath:
                 return (strategy, input_fpath)
 
     strategy_config = get_strategy(args)
