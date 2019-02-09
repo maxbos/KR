@@ -25,10 +25,10 @@ if __name__ == '__main__':
     parser.add_argument('-S3', type=str, help="DP with h3")
     args = parser.parse_args()
 
-    def get_strategy(args):
+    def get_strategy_config(args):
         for strategy, input_fpath in vars(args):
             if input_fpath:
                 return (strategy, input_fpath)
 
-    strategy_config = get_strategy(args)
+    strategy_config = get_strategy_config(args)
     main(strategy_config)
