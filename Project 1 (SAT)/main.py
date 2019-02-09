@@ -26,6 +26,8 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     def get_strategy_config(args):
+        """Return the first argument that has a specified input filepath.
+        """
         for strategy, input_fpath in vars(args):
             if input_fpath:
                 return (strategy, input_fpath)
