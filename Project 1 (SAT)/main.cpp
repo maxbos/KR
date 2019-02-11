@@ -18,8 +18,7 @@ class DavisPutnam {
 }
 
 int main() {
-
-    DavisPutnam davisPutnam;
-    
-    return 0;
+  DavisPutnam* davisPutnam = new DavisPutnam ();
+  
+  return 0;
 }
