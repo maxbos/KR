@@ -16,10 +16,22 @@ using namespace std;
 class DavisPutnam {
   string strategy;
   string inputFilePath;
+public:
+  DavisPutnam           (string strategy, string inputFilePath);
+  void simplify         ();
 };
 
 int main() {
-  DavisPutnam* davisPutnam = new DavisPutnam ();
+  DavisPutnam davisPutnam("S1", "./iets");
   
   return 0;
+}
+
+DavisPutnam::DavisPutnam(string strategy, string inputFilePath)
+  : strategy(strategy), inputFilePath(inputFilePath) {
+
+}
+
+void DavisPutnam::simplify() {
+
 }
