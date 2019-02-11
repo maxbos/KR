@@ -14,8 +14,9 @@
 using namespace std;
 
 class DavisPutnam {
-
-}
+  string strategy;
+  string inputFilePath;
+};
 
 int main() {
   DavisPutnam* davisPutnam = new DavisPutnam ();
