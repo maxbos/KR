@@ -12,3 +12,14 @@
 #include <string>
 
 using namespace std;
+
+class DavisPutnam {
+
+}
+
+int main() {
+
+    DavisPutnam davisPutnam;
+    
+    return 0;
+}
