@@ -26,19 +26,20 @@ vector< vector<int> > readDimacsFile(string loc) {
     ifstream dimacsFile;
     dimacsFile.open(loc);
 
+    vector<int> empty_vec;
     vector< vector<int> > clauses;
-    
+    clauses.push_back(empty_vec);
+
     string skip;
-    int numClauses;
-    int numVariables;
-    dimacsFile >> skip >> skip >> numClauses >> numVariables;
-    clauses.resize(numClauses);
+    // Skip the first 4 strings in the first line
+    dimacsFile >> skip >> skip >> skip >> skip;
 
     int clause = 0;
     int literal;
     while(dimacsFile >> literal) {
         if (literal == 0) {
             clause++;
+            clauses.push_back(empty_vec);
             continue;
         } 
         clauses[clause].push_back(literal);
@@ -52,7 +53,7 @@ void printClauses(vector< vector<int> > clauses) {
     for (int j = 0; j < clauses[i].size(); j++) {
         cout<<clauses[i][j]<<" + ";
     }
-    cout<<endl<<endl;
+    cout<<endl;
   }
 }
 
