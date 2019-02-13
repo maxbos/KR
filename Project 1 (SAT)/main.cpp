@@ -20,8 +20,9 @@ void printClauses                     (vector<vector<int> >);
 class DavisPutnam {
   string strategy;
   vector<vector<int> > clauses;
-  vector<int> getLiterals                                           (vector<int>);
   tuple<vector<vector<int> >, vector<int>, bool> unitPropagate      (vector<vector<int> >, vector<int>);
+  int getNextLiteral                                                (vector<int>);
+  vector<int> getLiterals                                           (vector<int>);
 
 public:
   DavisPutnam                         (string strategy, vector<vector<int> > clauses);
@@ -95,11 +96,20 @@ vector<int> DavisPutnam::recursive(vector<vector<int> > clauses, vector<int> ass
   // We perform the branching step by picking a literal that is not yet included
   // in out partial assignment.
   int literal = getNextLiteral(getLiterals(assignments));
-  if (recursive(clauses, assignments.push_back(literal))) {
+  assignments.push_back(literal);
+  if (!recursive(clauses, assignments).empty()) {
     return assignments;
   }
+  // Re-set the last assignment to its counterpart value, the False assignment.
+  int lastAssignmentIndex = assignments.size()-1;
+  assignments[lastAssignmentIndex] = assignments[lastAssignmentIndex] * -1;
   // Call the recursive method with the literal having assigned a False value.
-  return recursive(clauses, assignments.push_back(literal * -1));
+  return recursive(clauses, assignments);
+}
+
+// Based on the set heuristic, pick the next literal to branch into.
+int DavisPutnam::getNextLiteral(vector<int> currentLiterals) {
+  return 111;
 }
 
 // Calculates the absolute (TRUE) values of each assignment, which represents
