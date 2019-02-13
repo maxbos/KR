@@ -29,13 +29,13 @@ public:
 
 int main() {
   vector<vector<int> > clauses = readDimacsFile("resources/inputfile.txt");
-  printClauses(clauses);
-
   DavisPutnam davisPutnam("S1", "./iets");
-  
   return 0;
 }
 
+// Reads and parses a DIMACS file from a given file location.
+// The DIMACS clauses are stored as a (formula) vector of clause
+// vectors.
 vector<vector<int> > readDimacsFile(string loc) {
   ifstream dimacsFile;
   dimacsFile.open(loc);
@@ -62,6 +62,8 @@ vector<vector<int> > readDimacsFile(string loc) {
   return clauses;
 }
 
+// Prints a formula of clauses, where each clause is printed
+// on its individual line.
 void printClauses(vector<vector<int> > clauses) {
   for (int i = 0; i < clauses.size(); i++) {
     for (int j = 0; j < clauses[i].size(); j++) {
