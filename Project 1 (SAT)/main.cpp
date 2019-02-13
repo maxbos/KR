@@ -23,7 +23,9 @@ class DavisPutnam {
   string strategy;
   string inputFilePath;
   vector<vector<int> > clauses;
-  tuple<vector<vector<int> >, vector<int>> unitPropagate (vector<vector<int> >, vector<int>);
+  tuple<vector<vector<int> >, vector<int>> unitPropagate            (vector<vector<int> >, vector<int>);
+  vector<vector<int> > removeTautologies                            (vector<vector<int> >);
+  vector<vector<int> > removeItemsByIndices                         (vector<vector<int> >, vector<int>);
   int getNextLiteral                                                (vector<int>);
   vector<int> getLiterals                                           (vector<int>);
   bool containsEmptyClause                                          (vector<vector<int> >);
@@ -98,13 +100,31 @@ tuple<vector<vector<int> >, vector<int>> DavisPutnam::unitPropagate(
       partialAssignments.push_back(F[i][0]);
     }
   }
+  F = removeItemsByIndices(F, removeIndices);
+  return make_tuple(F, partialAssignments);
+}
+
+vector<vector<int> > DavisPutnam::removeTautologies(vector<vector<int> > F) {
+  vector<int> removeIndices;
+  for (int i = 0; i < F.size(); i++) {
+    vector<int> clause = F[i];
+    for (int j = 0; j < clause.size(); j++) {
+      if (find(clause.begin(), clause.end(), -clause[j]) != clause.end()) {
+        removeIndices.push_back(i);
+      }
+    }
+  }
+  return removeItemsByIndices(F, removeIndices);
+}
+
+vector<vector<int> > DavisPutnam::removeItemsByIndices(vector<vector<int> > F, vector<int> removeIndices) {
   // Sort the indices such that we can remove the highest indices first
   sort(removeIndices.begin(), removeIndices.end(), greater<int>());
-  // Remove the unit clauses from the formula list
+  // Remove the clauses from the formula list
   for (int i = 0; i < removeIndices.size(); i++) {
     F.erase(F.begin() + removeIndices[i]);
   }
-  return make_tuple(F, partialAssignments);
+  return F;
 }
 
 vector<int> DavisPutnam::recursive(vector<vector<int> > clauses, vector<int> assignments) {
@@ -123,13 +143,6 @@ vector<int> DavisPutnam::recursive(vector<vector<int> > clauses, vector<int> ass
   assignments[lastAssignmentIndex] = assignments[lastAssignmentIndex] * -1;
   // Call the recursive method with the literal having assigned a False value.
   return recursive(clauses, assignments);
-}
-
-tuple<vector<vector<int> >, vector<int>> DavisPutnam::unitPropagate(
-  vector<vector<int> > F, vector<int> assignments
-) {
-  F.erase(remove_if(F.begin(), F.end(), [](vector<int> n) {return n.size() == 1;}), F.end());
-  return make_tuple(F, assignments);
 }
 
 // Based on the set heuristic, pick the next literal to branch into.
