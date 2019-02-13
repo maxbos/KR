@@ -108,6 +108,10 @@ vector<int> DavisPutnam::recursive(vector<vector<int> > clauses, vector<int> ass
 
 // Based on the set heuristic, pick the next literal to branch into.
 int DavisPutnam::getNextLiteral(vector<int> currentLiterals) {
+  if (strategy == "S2")
+    return 111;
+  else if (strategy == "S3")
+    return 111;
   return 111;
 }
 
