@@ -10,15 +10,18 @@
 #include <iostream>
 #include <cstdlib>
 #include <string>
+#include <vector>
 
 using namespace std;
 
 class DavisPutnam {
   string strategy;
   string inputFilePath;
+  pair<vector<vector<int>>, vector<int>> unitPropagate (vector<vector<int>>, vector<int>);
 public:
-  DavisPutnam           (string strategy, string inputFilePath);
-  void simplify         ();
+  DavisPutnam                         (string strategy, string inputFilePath);
+  void recursive                      (vector<vector<int>>, vector<int>);
+  void simplify                       ();
 };
 
 int main() {
@@ -30,6 +33,23 @@ int main() {
 DavisPutnam::DavisPutnam(string strategy, string inputFilePath)
   : strategy(strategy), inputFilePath(inputFilePath) {
 
+}
+
+// pair<vector<vector<int>>, vector<int>> DavisPutnam::unitPropagate(
+//   vector<vector<int>> F, vector<int> partialAssignments
+// ) {
+//   int numberOfClauses = F.size();
+//   for (int i = 0; i < numberOfClauses; i++) {
+//     if (F[i].empty()) {
+//       return make_pair({{}}, {});
+//     }
+//   }
+// }
+
+void DavisPutnam::recursive(vector<vector<int>> F, vector<int> partialAssignments) {
+  simplify();
+  // split();
+  // backtrack();
 }
 
 void DavisPutnam::simplify() {
