@@ -83,7 +83,6 @@ DavisPutnam::DavisPutnam(string strategy, vector<vector<int> > clauses)
 
 vector<int> DavisPutnam::recursive(vector<vector<int> > clauses, vector<int> assignments) {
   bool emptyClause;
-
   tie(clauses, assignments, emptyClause) = unitPropagate(clauses, assignments);
   // When the set of clauses contains an empty clause, the problem is unsatisfiable.
   if (emptyClause) {
