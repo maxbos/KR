@@ -14,57 +14,61 @@
 
 using namespace std;
 
+vector<vector<int> > readDimacsFile   (string);
+void printClauses                     (vector<vector<int> >);
+
 class DavisPutnam {
   string strategy;
   string inputFilePath;
-  pair<vector<vector<int>>, vector<int>> unitPropagate (vector<vector<int>>, vector<int>);
+  pair<vector<vector<int> >, vector<int> > unitPropagate (vector<vector<int> >, vector<int>);
 public:
   DavisPutnam                         (string strategy, string inputFilePath);
-  void recursive                      (vector<vector<int>>, vector<int>);
+  void recursive                      (vector<vector<int> >, vector<int>);
   void simplify                       ();
 };
 
-vector< vector<int> > readDimacsFile(string loc) {
-    ifstream dimacsFile;
-    dimacsFile.open(loc);
-
-    vector<int> empty_vec;
-    vector< vector<int> > clauses;
-    clauses.push_back(empty_vec);
-
-    string skip;
-    // Skip the first 4 strings in the first line
-    dimacsFile >> skip >> skip >> skip >> skip;
-
-    int clause = 0;
-    int literal;
-    while(dimacsFile >> literal) {
-        if (literal == 0) {
-            clause++;
-            clauses.push_back(empty_vec);
-            continue;
-        } 
-        clauses[clause].push_back(literal);
-    }
-    dimacsFile.close();
-    return clauses;
-}
-
-void printClauses(vector< vector<int> > clauses) {
-  for (int i = 0; i < clauses.size(); i++) {
-    for (int j = 0; j < clauses[i].size(); j++) {
-        cout<<clauses[i][j]<<" + ";
-    }
-    cout<<endl;
-  }
-}
-
 int main() {
-  vector< vector<int> > clauses = readDimacsFile("resources/sudoku-rules.txt");
+  vector<vector<int> > clauses = readDimacsFile("resources/inputfile.txt");
   printClauses(clauses);
+
   DavisPutnam davisPutnam("S1", "./iets");
   
   return 0;
+}
+
+vector<vector<int> > readDimacsFile(string loc) {
+  ifstream dimacsFile;
+  dimacsFile.open(loc);
+
+  vector<int> empty_vec;
+  vector<vector<int> > clauses;
+  clauses.push_back(empty_vec);
+
+  string skip;
+  // Skip the first 4 strings in the first line
+  dimacsFile >> skip >> skip >> skip >> skip;
+
+  int clause = 0;
+  int literal;
+  while(dimacsFile >> literal) {
+    if (literal == 0) {
+      clause++;
+      clauses.push_back(empty_vec);
+      continue;
+    } 
+    clauses[clause].push_back(literal);
+  }
+  dimacsFile.close();
+  return clauses;
+}
+
+void printClauses(vector<vector<int> > clauses) {
+  for (int i = 0; i < clauses.size(); i++) {
+    for (int j = 0; j < clauses[i].size(); j++) {
+      cout << clauses[i][j] << " + ";
+    }
+    cout << endl;
+  }
 }
 
 DavisPutnam::DavisPutnam(string strategy, string inputFilePath)
@@ -83,7 +87,7 @@ DavisPutnam::DavisPutnam(string strategy, string inputFilePath)
 //   }
 // }
 
-void DavisPutnam::recursive(vector<vector<int>> F, vector<int> partialAssignments) {
+void DavisPutnam::recursive(vector<vector<int> > F, vector<int> partialAssignments) {
   simplify();
   // split();
   // backtrack();
