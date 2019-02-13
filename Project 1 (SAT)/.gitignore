@@ -1,5 +1,8 @@
 # Compiler output directory
-SAT.dSYM/*
+*.dSYM/*
+
+# macOS directory file
+.DS_Store
 
 # Editor settings
 .vscode/*
@@ -7,3 +10,6 @@ SAT.dSYM/*
 # Binaries
 SAT
 preprocess
+
+# Output files
+*.o
