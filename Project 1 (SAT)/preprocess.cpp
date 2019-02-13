@@ -7,7 +7,7 @@
  * The last argument is the output file name.
  * 
  * Studentnames:     Max Bos & Erik Stammes
- * Studentnumbers:   10669027 & ...
+ * Studentnumbers:   10669027 & 10559736
  */
 
 #include <fstream>

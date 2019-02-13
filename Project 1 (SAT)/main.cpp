@@ -19,17 +19,19 @@ void printClauses                     (vector<vector<int> >);
 
 class DavisPutnam {
   string strategy;
-  string inputFilePath;
-  pair<vector<vector<int> >, vector<int> > unitPropagate (vector<vector<int> >, vector<int>);
+  vector<vector<int> > clauses;
+  vector<int> getLiterals                                           (vector<int>);
+  tuple<vector<vector<int> >, vector<int>, bool> unitPropagate      (vector<vector<int> >, vector<int>);
+
 public:
-  DavisPutnam                         (string strategy, string inputFilePath);
-  void recursive                      (vector<vector<int> >, vector<int>);
+  DavisPutnam                         (string strategy, vector<vector<int> > clauses);
+  vector<int> recursive               (vector<vector<int> >, vector<int>);
   void simplify                       ();
 };
 
 int main() {
   vector<vector<int> > clauses = readDimacsFile("resources/inputfile.txt");
-  DavisPutnam davisPutnam("S1", "./iets");
+  DavisPutnam davisPutnam("S1", clauses);
   return 0;
 }
 
@@ -50,12 +52,12 @@ vector<vector<int> > readDimacsFile(string loc) {
 
   int clause = 0;
   int literal;
-  while(dimacsFile >> literal) {
+  while (dimacsFile >> literal) {
     if (literal == 0) {
       clause++;
       clauses.push_back(empty_vec);
       continue;
-    } 
+    }
     clauses[clause].push_back(literal);
   }
   dimacsFile.close();
@@ -73,28 +75,39 @@ void printClauses(vector<vector<int> > clauses) {
   }
 }
 
-DavisPutnam::DavisPutnam(string strategy, string inputFilePath)
-  : strategy(strategy), inputFilePath(inputFilePath) {
+DavisPutnam::DavisPutnam(string strategy, vector<vector<int> > clauses)
+  : strategy(strategy), clauses(clauses) {
 
 }
 
-// pair<vector<vector<int>>, vector<int>> DavisPutnam::unitPropagate(
-//   vector<vector<int>> F, vector<int> partialAssignments
-// ) {
-//   int numberOfClauses = F.size();
-//   for (int i = 0; i < numberOfClauses; i++) {
-//     if (F[i].empty()) {
-//       return make_pair({{}}, {});
-//     }
-//   }
-// }
+vector<int> DavisPutnam::recursive(vector<vector<int> > clauses, vector<int> assignments) {
+  bool emptyClause;
 
-void DavisPutnam::recursive(vector<vector<int> > F, vector<int> partialAssignments) {
-  simplify();
-  // split();
-  // backtrack();
+  tie(clauses, assignments, emptyClause) = unitPropagate(clauses, assignments);
+  // When the set of clauses contains an empty clause, the problem is unsatisfiable.
+  if (emptyClause) {
+    return {};
+  }
+  // We have found a successfull assignment when we have no clauses left.
+  if (clauses.empty()) {
+    return assignments;
+  }
+  // We perform the branching step by picking a literal that is not yet included
+  // in out partial assignment.
+  int literal = getNextLiteral(getLiterals(assignments));
+  if (recursive(clauses, assignments.push_back(literal))) {
+    return assignments;
+  }
+  // Call the recursive method with the literal having assigned a False value.
+  return recursive(clauses, assignments.push_back(literal * -1));
 }
 
-void DavisPutnam::simplify() {
-
+// Calculates the absolute (TRUE) values of each assignment, which represents
+// each literal.
+vector<int> DavisPutnam::getLiterals(vector<int> assignments) {
+  vector<int> literals;
+  for (auto& el : assignments) {
+    literals.push_back(abs(el));
+  }
+  return literals;
 }
