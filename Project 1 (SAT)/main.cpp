@@ -11,6 +11,8 @@
 #include <cstdlib>
 #include <string>
 #include <vector>
+#include <algorithm>
+#include <iterator>
 
 using namespace std;
 
@@ -20,10 +22,11 @@ void printClauses                     (vector<vector<int> >);
 class DavisPutnam {
   string strategy;
   string inputFilePath;
-  tuple<vector<vector<int> >, vector<int>> unitPropagate (vector<vector<int> >, vector<int>);
   vector<vector<int> > clauses;
+  tuple<vector<vector<int> >, vector<int>> unitPropagate (vector<vector<int> >, vector<int>);
   int getNextLiteral                                                (vector<int>);
   vector<int> getLiterals                                           (vector<int>);
+  bool containsEmptyClause                                          (vector<vector<int> >);
 
 public:
   DavisPutnam                         (string strategy, vector<vector<int> > clauses);
@@ -82,36 +85,29 @@ DavisPutnam::DavisPutnam(string strategy, vector<vector<int> > clauses)
 
 }
 
-tuple<vector<vector<int> >, vector<int>> DavisPutnam::unitPropagate(
-  vector< vector<int> > F, vector<int> partialAssignments
-) {
-  F.erase(remove_if(F.begin(), F.end(), [](vector<int> n) {return n.size() == 1;}), F.end());
-  return make_tuple(F, partialAssignments);
-}
-
 vector<int> DavisPutnam::recursive(vector<vector<int> > clauses, vector<int> assignments) {
-  bool emptyClause;
   tie(clauses, assignments) = unitPropagate(clauses, assignments);
   // When the set of clauses contains an empty clause, the problem is unsatisfiable.
-  if (emptyClause) {
-    return {};
-  }
+  if (containsEmptyClause(clauses)) return {};
   // We have found a successfull assignment when we have no clauses left.
-  if (clauses.empty()) {
-    return assignments;
-  }
+  if (clauses.empty()) return assignments;
   // We perform the branching step by picking a literal that is not yet included
   // in out partial assignment.
   int literal = getNextLiteral(getLiterals(assignments));
   assignments.push_back(literal);
-  if (!recursive(clauses, assignments).empty()) {
-    return assignments;
-  }
+  if (!recursive(clauses, assignments).empty()) return assignments;
   // Re-set the last assignment to its counterpart value, the False assignment.
   int lastAssignmentIndex = assignments.size()-1;
   assignments[lastAssignmentIndex] = assignments[lastAssignmentIndex] * -1;
   // Call the recursive method with the literal having assigned a False value.
   return recursive(clauses, assignments);
+}
+
+tuple<vector<vector<int> >, vector<int>> DavisPutnam::unitPropagate(
+  vector<vector<int> > F, vector<int> assignments
+) {
+  F.erase(remove_if(F.begin(), F.end(), [](vector<int> n) {return n.size() == 1;}), F.end());
+  return make_tuple(F, assignments);
 }
 
 // Based on the set heuristic, pick the next literal to branch into.
@@ -131,4 +127,11 @@ vector<int> DavisPutnam::getLiterals(vector<int> assignments) {
     literals.push_back(abs(el));
   }
   return literals;
+}
+
+// Checks whether a given set of clauses contains an empty clause.
+bool DavisPutnam::containsEmptyClause(vector<vector<int> > clauses) {
+  return find(begin(clauses), end(clauses), [](vector<int> n) {
+    return n.empty();
+  }) != clauses.end();
 }
