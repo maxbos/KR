@@ -32,6 +32,7 @@ public:
 };
 
 int main() {
+  // TODO load the inputfile dynamically
   vector<vector<int> > clauses = readDimacsFile("resources/inputfile.txt");
   DavisPutnam davisPutnam("S1", clauses);
   return 0;
@@ -85,7 +86,21 @@ DavisPutnam::DavisPutnam(string strategy, vector<vector<int> > clauses)
 tuple<vector<vector<int> >, vector<int>> DavisPutnam::unitPropagate(
   vector< vector<int> > F, vector<int> partialAssignments
 ) {
-  F.erase(remove_if(F.begin(), F.end(), [](vector<int> n) {return n.size() == 1;}), F.end());
+  // Save indices of clauses that can be removed and add those variables
+  // to the partial assignments list
+  vector<int> removeIndices;
+  for (int i = 0; i < F.size(); i++) {
+    if (F[i].size() == 1) {
+      removeIndices.push_back(i);
+      partialAssignments.push_back(F[i][0]);
+    }
+  }
+  // Sort the indices such that we can remove the highest indices first
+  sort(removeIndices.begin(), removeIndices.end(), greater<int>());
+  // Remove the unit clauses from the formula list
+  for (int i = 0; i < removeIndices.size(); i++) {
+    F.erase(F.begin() + removeIndices[i]);
+  }
   return make_tuple(F, partialAssignments);
 }
 
