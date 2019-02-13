@@ -1,0 +1,9 @@
+# Compiler output directory
+SAT.dSYM/*
+
+# Editor settings
+.vscode/*
+
+# Binaries
+SAT
+preprocess
