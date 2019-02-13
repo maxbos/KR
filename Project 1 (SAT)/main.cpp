@@ -20,7 +20,7 @@ void printClauses                     (vector<vector<int> >);
 class DavisPutnam {
   string strategy;
   string inputFilePath;
-  pair<vector<vector<int> >, vector<int> > unitPropagate (vector<vector<int> >, vector<int>);
+  tuple<vector<vector<int> >, vector<int>> unitPropagate (vector<vector<int> >, vector<int>);
 public:
   DavisPutnam                         (string strategy, string inputFilePath);
   void recursive                      (vector<vector<int> >, vector<int>);
@@ -78,16 +78,12 @@ DavisPutnam::DavisPutnam(string strategy, string inputFilePath)
 
 }
 
-// pair<vector<vector<int>>, vector<int>> DavisPutnam::unitPropagate(
-//   vector<vector<int>> F, vector<int> partialAssignments
-// ) {
-//   int numberOfClauses = F.size();
-//   for (int i = 0; i < numberOfClauses; i++) {
-//     if (F[i].empty()) {
-//       return make_pair({{}}, {});
-//     }
-//   }
-// }
+tuple<vector<vector<int> >, vector<int>> DavisPutnam::unitPropagate(
+  vector< vector<int> > F, vector<int> partialAssignments
+) {
+  F.erase(remove_if(F.begin(), F.end(), [](vector<int> n) {return n.size() == 1;}), F.end());
+  return make_tuple(F, partialAssignments);
+}
 
 void DavisPutnam::recursive(vector<vector<int> > F, vector<int> partialAssignments) {
   simplify();
