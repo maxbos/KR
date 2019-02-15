@@ -81,8 +81,13 @@ void printClauses(vector<vector<int> > clauses) {
 }
 
 DavisPutnam::DavisPutnam(string strategy, vector<vector<int> > clauses)
-  : strategy(strategy), clauses(clauses) {
-
+: strategy(strategy), clauses(clauses) {
+  // Initialize the recursive Davis Putnam algorithm with an empty set
+  // of assignments.
+  vector<int> assignments = recursive(clauses, {});
+  for (auto const& i: assignments) {
+    cout << i << " ";
+  }
 }
 
 vector<int> DavisPutnam::recursive(vector<vector<int> > clauses, vector<int> assignments) {
@@ -130,8 +135,8 @@ vector<int> DavisPutnam::getLiterals(vector<int> assignments) {
 }
 
 // Checks whether a given set of clauses contains an empty clause.
-bool DavisPutnam::containsEmptyClause(vector<vector<int> > clauses) {
-  return find(begin(clauses), end(clauses), [](vector<int> n) {
+bool DavisPutnam::containsEmptyClause(vector<vector<int> > F) {
+  return find_if(F.begin(), F.end(), [](const vector<int> n) {
     return n.empty();
-  }) != clauses.end();
+  }) != F.end();
 }
