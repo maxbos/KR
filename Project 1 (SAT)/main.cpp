@@ -75,9 +75,9 @@ vector<vector<int> > readDimacsFile(string loc) {
 // Prints a formula of clauses, where each clause is printed
 // on its individual line.
 void printClauses(vector<vector<int> > clauses) {
-  for (int i = 0; i < clauses.size(); i++) {
-    for (int j = 0; j < clauses[i].size(); j++) {
-      cout << clauses[i][j] << " + ";
+  for (vector<int> const& clause: clauses) {
+    for (int const& literal: clause) {
+      cout << literal << " + ";
     }
     cout << endl;
   }
