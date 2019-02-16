@@ -23,6 +23,8 @@ class DavisPutnam {
   string strategy;
   string inputFilePath;
   vector<vector<int> > clauses;
+  tuple<vector<vector<int> >, vector<int>> setup                    (vector<vector<int> >);
+  vector<int> recursive                                             (vector<vector<int> >, vector<int>);
   tuple<vector<vector<int> >, vector<int>> unitPropagate            (vector<vector<int> >, vector<int>);
   vector<vector<int> > removeTautologies                            (vector<vector<int> >);
   vector<vector<int> > removeItemsByIndices                         (vector<vector<int> >, vector<int>);
@@ -32,8 +34,6 @@ class DavisPutnam {
 
 public:
   DavisPutnam                         (string strategy, vector<vector<int> > clauses);
-  vector<int> recursive               (vector<vector<int> >, vector<int>);
-  void simplify                       ();
 };
 
 int main() {
@@ -91,10 +91,41 @@ DavisPutnam::DavisPutnam(string strategy, vector<vector<int> > clauses)
 : strategy(strategy), clauses(clauses) {
   // Initialize the recursive Davis Putnam algorithm with an empty set
   // of assignments.
-  vector<int> assignments = recursive(clauses, {});
-  for (auto const& i: assignments) {
+  vector<int> assignments;
+  tie(clauses, assignments) = setup(clauses);
+  vector<int> finalAssignments = recursive(clauses, assignments);
+  for (auto const& i: finalAssignments) {
     cout << i << " ";
   }
+}
+
+// Perform essential steps before starting the recursive Davis Putnam algorithm,
+// such as removing tautologies from the initial Formula, and assigning the
+// first literal.
+tuple<vector<vector<int> >, vector<int>> DavisPutnam::setup(vector<vector<int> > F) {
+  F = removeTautologies(F);
+  vector<int> assignments = { getNextLiteral(F) };
+  return make_tuple(F, assignments);
+}
+
+vector<int> DavisPutnam::recursive(vector<vector<int> > clauses, vector<int> assignments) {
+  cout << " recursive call " << endl;
+  tie(clauses, assignments) = unitPropagate(clauses, assignments);
+  cout << "number of clauses left: " << clauses.size() << endl;
+  // When the set of clauses contains an empty clause, the problem is unsatisfiable.
+  if (containsEmptyClause(clauses)) return {};
+  // We have found a successfull assignment when we have no clauses left.
+  if (clauses.empty()) return assignments;
+  // We perform the branching step by picking a literal that is not yet included
+  // in out partial assignment.
+  int literal = getNextLiteral(getLiterals(assignments));
+  assignments.push_back(literal);
+  if (!recursive(clauses, assignments).empty()) return assignments;
+  // Re-set the last assignment to its counterpart value, the False assignment.
+  int lastAssignmentIndex = assignments.size()-1;
+  assignments[lastAssignmentIndex] = assignments[lastAssignmentIndex] * -1;
+  // Call the recursive method with the literal having assigned a False value.
+  return recursive(clauses, assignments);
 }
 
 tuple<vector<vector<int> >, vector<int>> DavisPutnam::unitPropagate(
@@ -134,25 +165,6 @@ vector<vector<int> > DavisPutnam::removeItemsByIndices(vector<vector<int> > F, v
     F.erase(F.begin() + index);
   }
   return F;
-}
-
-vector<int> DavisPutnam::recursive(vector<vector<int> > clauses, vector<int> assignments) {
-  cout << " recursive call " << endl;
-  tie(clauses, assignments) = unitPropagate(clauses, assignments);
-  // When the set of clauses contains an empty clause, the problem is unsatisfiable.
-  if (containsEmptyClause(clauses)) return {};
-  // We have found a successfull assignment when we have no clauses left.
-  if (clauses.empty()) return assignments;
-  // We perform the branching step by picking a literal that is not yet included
-  // in out partial assignment.
-  int literal = getNextLiteral(getLiterals(assignments));
-  assignments.push_back(literal);
-  if (!recursive(clauses, assignments).empty()) return assignments;
-  // Re-set the last assignment to its counterpart value, the False assignment.
-  int lastAssignmentIndex = assignments.size()-1;
-  assignments[lastAssignmentIndex] = assignments[lastAssignmentIndex] * -1;
-  // Call the recursive method with the literal having assigned a False value.
-  return recursive(clauses, assignments);
 }
 
 // Based on the set heuristic, pick the next literal to branch into.
