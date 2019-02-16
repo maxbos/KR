@@ -168,7 +168,7 @@ int DavisPutnam::getNextLiteral(vector<int> currentLiterals) {
 // each literal.
 vector<int> DavisPutnam::getLiterals(vector<int> assignments) {
   vector<int> literals;
-  for (auto& el : assignments) {
+  for (auto const& el : assignments) {
     literals.push_back(abs(el));
   }
   return literals;
