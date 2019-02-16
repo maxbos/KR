@@ -39,7 +39,8 @@ public:
 
 int main() {
   // TODO load the inputfile dynamically
-  vector<vector<int> > clauses = readDimacsFile("resources/inputfile.txt");
+  vector<vector<int> > clauses = readDimacsFile("resources/1000-sudokus/1000.txt");
+  // printClauses(clauses);
   DavisPutnam davisPutnam("S1", clauses);
   return 0;
 }
