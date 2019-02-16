@@ -95,7 +95,7 @@ DavisPutnam::DavisPutnam(string strategy, vector<vector<int> > clauses)
   vector<int> assignments;
   clauses = setup(clauses);
   vector<int> finalAssignments = recursive(clauses, assignments);
-  cout << "The final assignment is:";
+  cout << "The final assignment is: ";
   for (auto const& i: finalAssignments) {
     cout << i << " ";
   }
@@ -216,7 +216,7 @@ int DavisPutnam::getNextLiteral(vector<vector<int> > F, vector<int> currentVaria
       const bool literalIsAlreadyAssigned = find(
         currentVariables.begin(), currentVariables.end(), abs(literal)
       ) != currentVariables.end();
-      if (literal > 0 && !literalIsAlreadyAssigned ) {
+      if (!literalIsAlreadyAssigned) {
         nextLiteral = abs(literal);
         break;
       }
