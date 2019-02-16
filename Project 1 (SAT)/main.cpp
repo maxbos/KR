@@ -50,23 +50,27 @@ vector<vector<int> > readDimacsFile(string loc) {
   ifstream dimacsFile;
   dimacsFile.open(loc);
 
-  vector<int> empty_vec;
   vector<vector<int> > clauses;
-  clauses.push_back(empty_vec);
 
   string skip;
   // Skip the first 4 strings in the first line
   dimacsFile >> skip >> skip >> skip >> skip;
 
-  int clause = 0;
   int literal;
+  int prevLiteral = 0;
+  vector<int> *lastClause;
+
   while (dimacsFile >> literal) {
-    if (literal == 0) {
-      clause++;
-      clauses.push_back(empty_vec);
-      continue;
+    if (literal != 0) {
+      if (prevLiteral == 0) {
+        vector<int> clause = { literal };
+        clauses.push_back(clause);
+        lastClause = &clauses.back();
+      } else {
+        lastClause->push_back(literal);
+      }
     }
-    clauses[clause].push_back(literal);
+    prevLiteral = literal;
   }
   dimacsFile.close();
   return clauses;
@@ -94,7 +98,7 @@ DavisPutnam::DavisPutnam(string strategy, vector<vector<int> > clauses)
 }
 
 tuple<vector<vector<int> >, vector<int>> DavisPutnam::unitPropagate(
-  vector< vector<int> > F, vector<int> partialAssignments
+  vector<vector<int> > F, vector<int> assignments
 ) {
   // Save indices of clauses that can be removed and add those variables
   // to the partial assignments list
@@ -102,19 +106,19 @@ tuple<vector<vector<int> >, vector<int>> DavisPutnam::unitPropagate(
   for (int i = 0; i < F.size(); i++) {
     if (F[i].size() == 1) {
       removeIndices.push_back(i);
-      partialAssignments.push_back(F[i][0]);
+      assignments.push_back(F[i][0]);
     }
   }
   F = removeItemsByIndices(F, removeIndices);
-  return make_tuple(F, partialAssignments);
+  return make_tuple(F, assignments);
 }
 
 vector<vector<int> > DavisPutnam::removeTautologies(vector<vector<int> > F) {
   vector<int> removeIndices;
   for (int i = 0; i < F.size(); i++) {
-    vector<int> clause = F[i];
-    for (int j = 0; j < clause.size(); j++) {
-      if (find(clause.begin(), clause.end(), -clause[j]) != clause.end()) {
+    vector<int> const& clause = F[i];
+    for (int const& literal : clause) {
+      if (find(clause.begin(), clause.end(), -literal) != clause.end()) {
         removeIndices.push_back(i);
       }
     }
@@ -126,13 +130,14 @@ vector<vector<int> > DavisPutnam::removeItemsByIndices(vector<vector<int> > F, v
   // Sort the indices such that we can remove the highest indices first
   sort(removeIndices.begin(), removeIndices.end(), greater<int>());
   // Remove the clauses from the formula list
-  for (int i = 0; i < removeIndices.size(); i++) {
-    F.erase(F.begin() + removeIndices[i]);
+  for (auto const& index : removeIndices) {
+    F.erase(F.begin() + index);
   }
   return F;
 }
 
 vector<int> DavisPutnam::recursive(vector<vector<int> > clauses, vector<int> assignments) {
+  cout << " recursive call " << endl;
   tie(clauses, assignments) = unitPropagate(clauses, assignments);
   // When the set of clauses contains an empty clause, the problem is unsatisfiable.
   if (containsEmptyClause(clauses)) return {};
@@ -171,7 +176,7 @@ vector<int> DavisPutnam::getLiterals(vector<int> assignments) {
 
 // Checks whether a given set of clauses contains an empty clause.
 bool DavisPutnam::containsEmptyClause(vector<vector<int> > F) {
-  return find_if(F.begin(), F.end(), [](const vector<int> n) {
-    return n.empty();
+  return find_if(F.begin(), F.end(), [](vector<int> const& clause) {
+    return clause.empty();
   }) != F.end();
 }
