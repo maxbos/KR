@@ -213,15 +213,19 @@ int DavisPutnam::getNextLiteral(vector<vector<int> > F, vector<int> currentVaria
   int nextLiteral;
   for (auto const& clause : F) {
     for (int const& literal : clause) {
+      // Find whether the variable (positive value of the literal) already is included
+      // in the current set of variables.
       const bool literalIsAlreadyAssigned = find(
         currentVariables.begin(), currentVariables.end(), abs(literal)
       ) != currentVariables.end();
       if (!literalIsAlreadyAssigned) {
         nextLiteral = abs(literal);
-        break;
+        // Jump out of the nested for loops and return the next literal.
+        goto end;
       }
     }
   }
+  end:
   return nextLiteral;
 }
 
