@@ -1,2 +1,21 @@
+# Compiler output directory
+*.dSYM/*
 
-*/resources/1000-sudokus/*
+# macOS directory file
+.DS_Store
+
+# Editor settings
+.vscode/*
+
+# Binaries
+./SAT
+preprocess
+
+# Output files
+*.o
+
+# Resources
+*/SAT/resources/1000-sudokus/*
+
+# Xcode files
+xcuserdata/
