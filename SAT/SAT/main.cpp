@@ -8,12 +8,7 @@
 
 #include <fstream>
 #include <iostream>
-#include <cstdlib>
-#include <string>
 #include <vector>
-#include <algorithm>
-#include <iterator>
-#include <array>
 #include <set>
 #include <map>
 
