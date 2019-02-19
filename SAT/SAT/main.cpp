@@ -14,6 +14,7 @@
 #include <algorithm>
 #include <iterator>
 #include <array>
+#include <set>
 
 using namespace std;
 
@@ -30,8 +31,8 @@ class DavisPutnam {
     vector<vector<int> > simplify                                     (vector<vector<int> >, int);
     vector<vector<int> > removeTautologies                            (vector<vector<int> >);
     vector<vector<int> > removeItemsByIndices                         (vector<vector<int> >, vector<int>);
-    int getNextLiteral                                                (vector<vector<int> >, vector<int>);
-    vector<int> getVariables                                          (vector<int>);
+    int getNextLiteral                                                (vector<vector<int> >, set<int>);
+    set<int> getVariables                                             (vector<int>);
     bool containsEmptyClause                                          (vector<vector<int> >);
     
 public:
@@ -156,7 +157,7 @@ tuple<vector<vector<int> >, vector<int>> DavisPutnam::unitPropagate(
 // Simplify the Formula by removing all clauses containing the `literal`
 // and by removing the literal from a clause where it is `-literal`.
 vector<vector<int> > DavisPutnam::simplify(vector<vector<int> > F, int subjectLiteral) {
-    vector<vector<int> > newF;
+    vector<vector<int> > newF = F;
     int numberOfRemovedClauses = 0;
     for (int i = 0; i < F.size(); i++) {
         vector<int> const& clause = F[i];
@@ -211,7 +212,7 @@ vector<vector<int> > DavisPutnam::removeItemsByIndices(vector<vector<int> > F, v
 // Based on the set heuristic, pick the next (TRUE) literal to branch into.
 // Iterate through the current formula (clauses set), and find the first variable (TRUE literal)
 // that is not yet already included in our current set of variables.
-int DavisPutnam::getNextLiteral(vector<vector<int> > F, vector<int> currentVariables) {
+int DavisPutnam::getNextLiteral(vector<vector<int> > F, set<int> currentVariables) {
     int nextLiteral;
     for (auto const& clause : F) {
         for (int const& literal : clause) {
@@ -220,6 +221,7 @@ int DavisPutnam::getNextLiteral(vector<vector<int> > F, vector<int> currentVaria
             const bool literalIsAlreadyAssigned = find(
                                                        currentVariables.begin(), currentVariables.end(), abs(literal)
                                                        ) != currentVariables.end();
+            
             if (!literalIsAlreadyAssigned) {
                 nextLiteral = abs(literal);
                 // Jump out of the nested for loops and return the next literal.
@@ -233,10 +235,10 @@ end:
 
 // Calculates the absolute (TRUE) values of each assignment, which represents
 // each literal.
-vector<int> DavisPutnam::getVariables(vector<int> assignments) {
-    vector<int> variables;
+set<int> DavisPutnam::getVariables(vector<int> assignments) {
+    set<int> variables;
     for (auto const& el : assignments) {
-        variables.push_back(abs(el));
+        variables.insert(abs(el));
     }
     return variables;
 }
