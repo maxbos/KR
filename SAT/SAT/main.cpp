@@ -164,9 +164,13 @@ Formula DavisPutnam::simplify(Formula formula, int subjectLiteral) {
     map<int, vector<int> > index = formula.index;
     vector<int> clausesToDelete = index[subjectLiteral];
     for (auto clauseNumber : clausesToDelete) {
+        for (auto literal : clauses[clauseNumber]) {
+            vector<int> clauseIndices = index[literal];
+            clauseIndices.erase(remove(clauseIndices.begin(), clauseIndices.end(), clauseNumber), clauseIndices.end());
+        }
         clauses.erase(clauseNumber);
     }
-//    index.erase(subjectLiteral);
+    index.erase(subjectLiteral);
     // Check if the negative of the literal exists in the index
     if (index.count(-subjectLiteral)) {
         vector<int> clausesToDeleteLiteralFrom = index[-subjectLiteral];
@@ -174,7 +178,7 @@ Formula DavisPutnam::simplify(Formula formula, int subjectLiteral) {
             vector<int> clause = clauses[clauseNumber];
             clause.erase(remove(clause.begin(), clause.end(), -subjectLiteral)); //TODO: write a simple helper function to delete elements from vector
         }
-//        index.erase(-subjectLiteral);
+        index.erase(-subjectLiteral);
     }
     return Formula { clauses, index };
 }
