@@ -8,17 +8,19 @@
 
 /* Begin PBXBuildFile section */
 		A0A2AAB4221C0C8B00EC6DCC /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A0A2AAB3221C0C8B00EC6DCC /* main.cpp */; };
+		A0A2AABD2220098F00EC6DCC /* resources in CopyFiles */ = {isa = PBXBuildFile; fileRef = A0A2AABA221C0D0A00EC6DCC /* resources */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
 		A0A2AAAE221C0C8B00EC6DCC /* CopyFiles */ = {
 			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
-			dstPath = /usr/share/man/man1/;
-			dstSubfolderSpec = 0;
+			buildActionMask = 12;
+			dstPath = "";
+			dstSubfolderSpec = 16;
 			files = (
+				A0A2AABD2220098F00EC6DCC /* resources in CopyFiles */,
 			);
-			runOnlyForDeploymentPostprocessing = 1;
+			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXCopyFilesBuildPhase section */
 
