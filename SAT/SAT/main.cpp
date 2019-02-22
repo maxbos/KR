@@ -28,6 +28,7 @@ class DavisPutnam {
     Formula formula;
     Formula setup                                   (Formula);
     vector<int> recursive                           (Formula, vector<int>);
+    tuple<Formula, vector<int>> pureLiterals        (Formula, vector<int>);
     tuple<Formula, vector<int>> unitPropagate       (Formula, vector<int>);
     Formula simplify                                (Formula, int);
     Formula removeTautologies                       (Formula);
@@ -120,8 +121,7 @@ Formula DavisPutnam::setup(Formula formula) {
 
 vector<int> DavisPutnam::recursive(Formula formula, vector<int> assignments) {
     cout << " recursive call " << endl;
-//    map<int, vector<int> > clauses = formula.clauses;
-//    map<int, vector<int> > index = formula.index;
+    tie(formula, assignments) = pureLiterals(formula, assignments);
     tie(formula, assignments) = unitPropagate(formula, assignments);
     cout << "number of clauses left: " << formula.clauses.size() << endl;
     // When the set of clauses contains an empty clause, the problem is unsatisfiable.
@@ -142,6 +142,10 @@ vector<int> DavisPutnam::recursive(Formula formula, vector<int> assignments) {
     formula.clauses[newClauseNumber] = vector<int> {-literal};
     assignments[assignments.size()-1] = -literal;
     return recursive(formula, assignments);
+}
+
+tuple<Formula, vector<int>> DavisPutnam::pureLiterals(Formula formula, vector<int> assignments) {
+    
 }
 
 // For each unit clause in the Formula, set the literal from that clause to TRUE,
@@ -176,7 +180,7 @@ Formula DavisPutnam::simplify(Formula formula, int subjectLiteral) {
         vector<int> clausesToDeleteLiteralFrom = index[-subjectLiteral];
         for (auto clauseNumber : clausesToDeleteLiteralFrom) {
             vector<int> clause = clauses[clauseNumber];
-            clause.erase(remove(clause.begin(), clause.end(), -subjectLiteral)); //TODO: write a simple helper function to delete elements from vector
+            clause.erase(remove(clause.begin(), clause.end(), -subjectLiteral), clause.end()); //TODO: write a simple helper function to delete elements from vector
         }
         index.erase(-subjectLiteral);
     }
