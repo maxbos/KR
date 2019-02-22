@@ -23,7 +23,6 @@ Formula readDimacsFile      (string);
 void printClauses           (map<int, vector<int> >);
 
 class DavisPutnam {
-    //TODO fix this mess
     string strategy;
     string inputFilePath;
     Formula formula;
@@ -51,13 +50,12 @@ int main() {
 }
 
 // Reads and parses a DIMACS file from a given file location.
-// The DIMACS clauses are stored as a (formula) vector of clause
-// vectors.
+// The DIMACS clauses are stored as a Formula consisting
+// of clauses and an index map.
 Formula readDimacsFile(string loc) {
     ifstream dimacsFile;
     dimacsFile.open(loc);
     
-//    vector<vector<int> > clauses;
     map<int, vector<int> > clauses;
     map<int, vector<int> > index;
     
@@ -149,13 +147,14 @@ vector<int> DavisPutnam::recursive(Formula formula, vector<int> assignments) {
 // For each unit clause in the Formula, set the literal from that clause to TRUE,
 // and simplify the Formula.
 tuple<Formula, vector<int>> DavisPutnam::unitPropagate(Formula formula, vector<int> assignments) {
+    Formula newFormula = Formula { formula.clauses, formula.index };
     for( auto const& [clauseNumber, clause] : formula.clauses ) {
         if (clause.size() == 1) {
             int const literal = clause[0];
-            formula = simplify(formula, literal);
+            newFormula = simplify(newFormula, literal);
         }
     }
-    return make_tuple(formula, assignments);
+    return make_tuple(newFormula, assignments);
 }
 
 // Simplify the Formula by removing all clauses containing the `literal`
@@ -248,9 +247,9 @@ set<int> DavisPutnam::getVariables(vector<int> assignments) {
 // Checks whether a given set of clauses contains an empty clause.
 bool DavisPutnam::containsEmptyClause(map<int, vector<int> > clauses) {
     for (auto const& [clauseNumbers, clause] : clauses ) {
-        if (clause.size() == 0) return false;
+        if (clause.size() == 0) return true;
     }
-    return true;
+    return false;
 }
 
 int DavisPutnam::getHighestKey(map<int, vector<int>> map) {
