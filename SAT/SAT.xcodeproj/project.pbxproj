@@ -7,18 +7,21 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		145E1C19222018A10098D861 /* resources in Copy Files */ = {isa = PBXBuildFile; fileRef = A0A2AABA221C0D0A00EC6DCC /* resources */; };
 		A0A2AAB4221C0C8B00EC6DCC /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A0A2AAB3221C0C8B00EC6DCC /* main.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
-		A0A2AAAE221C0C8B00EC6DCC /* CopyFiles */ = {
+		A0A2AAAE221C0C8B00EC6DCC /* Copy Files */ = {
 			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
-			dstPath = /usr/share/man/man1/;
-			dstSubfolderSpec = 0;
+			buildActionMask = 12;
+			dstPath = "";
+			dstSubfolderSpec = 16;
 			files = (
+				145E1C19222018A10098D861 /* resources in Copy Files */,
 			);
-			runOnlyForDeploymentPostprocessing = 1;
+			name = "Copy Files";
+			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXCopyFilesBuildPhase section */
 
@@ -73,7 +76,7 @@
 			buildPhases = (
 				A0A2AAAC221C0C8B00EC6DCC /* Sources */,
 				A0A2AAAD221C0C8B00EC6DCC /* Frameworks */,
-				A0A2AAAE221C0C8B00EC6DCC /* CopyFiles */,
+				A0A2AAAE221C0C8B00EC6DCC /* Copy Files */,
 			);
 			buildRules = (
 			);

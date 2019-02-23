@@ -15,45 +15,58 @@
 #include <iterator>
 #include <array>
 #include <set>
+#include <map>
 
 using namespace std;
 
-vector<vector<int> > readDimacsFile   (string);
-void printClauses                     (vector<vector<int> >);
+struct Formula {
+    vector<vector<int> > clauses;
+    map<int, vector<vector<int >* > > literals;
+    bool containsEmptyClause;
+    void addClauseForLiteral(int literal) {
+        clauses.push_back({ literal });
+        vector<int> *clausePtr = &clauses.back();
+        literals[literal].push_back(clausePtr);
+    };
+};
+
+Formula readDimacsFile                  (string);
+void printClauses                       (vector<vector<int> >);
 
 class DavisPutnam {
     string strategy;
     string inputFilePath;
-    vector<vector<int> > clauses;
-    vector<vector<int> > setup                                        (vector<vector<int> >);
-    vector<int> recursive                                             (vector<vector<int> >, vector<int>);
-    tuple<vector<vector<int> >, vector<int>> unitPropagate            (vector<vector<int> >, vector<int>);
-    vector<vector<int> > simplify                                     (vector<vector<int> >, int);
-    vector<vector<int> > removeTautologies                            (vector<vector<int> >);
-    vector<vector<int> > removeItemsByIndices                         (vector<vector<int> >, vector<int>);
-    int getNextLiteral                                                (vector<vector<int> >, set<int>);
-    set<int> getVariables                                             (vector<int>);
-    bool containsEmptyClause                                          (vector<vector<int> >);
+    Formula formula;
+    Formula setup                                               (Formula);
+    vector<int> recursive                                       (Formula, vector<int>);
+    tuple<Formula, vector<int> > pureLiterals                   (Formula, vector<int>);
+    tuple<Formula, vector<int> > unitPropagate                  (Formula, vector<int>);
+    Formula simplify                                            (Formula, int);
+    Formula removeTautologies                                   (Formula);
+    vector<vector<int> > removeItemsByIndices                   (vector<vector<int> >, vector<int>);
+    int getNextLiteral                                          (Formula, set<int>);
+    set<int> getVariables                                       (vector<int>);
     
 public:
-    DavisPutnam                         (string strategy, vector<vector<int> > clauses);
+    DavisPutnam                         (string strategy, Formula formula);
 };
 
 int main() {
     // TODO load the inputfile dynamically
-    vector<vector<int> > clauses = readDimacsFile("resources/1000-sudokus/1000.txt");
-    // printClauses(clauses);
-    DavisPutnam davisPutnam("S1", clauses);
+    Formula formula = readDimacsFile("resources/1000-sudokus/1000.txt");
+//     printClauses(clauses);
+    DavisPutnam davisPutnam("S1", formula);
     return 0;
 }
 
 // Reads and parses a DIMACS file from a given file location.
 // The DIMACS clauses are stored as a (formula) vector of clause
 // vectors.
-vector<vector<int> > readDimacsFile(string loc) {
+Formula readDimacsFile(string loc) {
     ifstream dimacsFile;
     dimacsFile.open(loc);
     
+    Formula formula;
     vector<vector<int> > clauses;
     
     string skip;
@@ -68,16 +81,18 @@ vector<vector<int> > readDimacsFile(string loc) {
         if (literal != 0) {
             if (prevLiteral == 0) {
                 vector<int> clause = { literal };
-                clauses.push_back(clause);
-                lastClause = &clauses.back();
+                formula.clauses.push_back(clause);
+                lastClause = &formula.clauses.back();
+                formula.literals[literal].push_back(lastClause);
             } else {
                 lastClause->push_back(literal);
+                formula.literals[literal].push_back(lastClause);
             }
         }
         prevLiteral = literal;
     }
     dimacsFile.close();
-    return clauses;
+    return formula;
 }
 
 // Prints a formula of clauses, where each clause is printed
@@ -91,63 +106,85 @@ void printClauses(vector<vector<int> > clauses) {
     }
 }
 
-DavisPutnam::DavisPutnam(string strategy, vector<vector<int> > clauses)
-: strategy(strategy), clauses(clauses) {
+DavisPutnam::DavisPutnam(string strategy, Formula formula)
+: strategy(strategy), formula(formula) {
     // Initialize the recursive Davis Putnam algorithm with an empty set
     // of assignments.
     vector<int> assignments;
-    clauses = setup(clauses);
-    vector<int> finalAssignments = recursive(clauses, assignments);
+    formula = setup(formula);
+    vector<int> finalAssignments = recursive(formula, assignments);
+    cout << finalAssignments.size() << endl;
     cout << "The final assignment is: ";
+    int count = 0;
     for (auto const& i: finalAssignments) {
-        cout << i << " ";
+        if (i > 0) {
+            count++;
+            cout << i << " ";
+        }
     }
+    cout << endl << count << endl;
     cout << endl;
 }
 
 // Perform essential steps before starting the recursive Davis Putnam algorithm,
 // such as removing tautologies from the initial Formula.
-vector<vector<int> > DavisPutnam::setup(vector<vector<int> > F) {
-    F = removeTautologies(F);
-    // TODO: set all pure literals to true in our assignment.
-    return F;
+Formula DavisPutnam::setup(Formula formula) {
+    formula = removeTautologies(formula);
+    return formula;
 }
 
-vector<int> DavisPutnam::recursive(vector<vector<int> > clauses, vector<int> assignments) {
+vector<int> DavisPutnam::recursive(Formula formula, vector<int> assignments) {
     cout << " recursive call " << endl;
-    vector<vector<int> > F;
-    tie(F, assignments) = unitPropagate(clauses, assignments);
-    cout << "number of clauses left: " << F.size() << endl;
+    Formula F = formula;
+    tie(F, assignments) = pureLiterals(F, assignments);
+    tie(F, assignments) = unitPropagate(F, assignments);
+    cout << "number of clauses left: " << F.clauses.size() << endl;
     // When the set of clauses contains an empty clause, the problem is unsatisfiable.
-    if (containsEmptyClause(F)) return {};
+    if (F.containsEmptyClause) return {};
     // We have found a successfull assignment when we have no clauses left.
-    if (F.empty()) return assignments;
+    if (F.clauses.empty()) return assignments;
     // We perform the branching step by picking a literal that is not yet included
     // in our partial assignment.
     int literal = getNextLiteral(F, getVariables(assignments));
     // Split into the TRUE value for the new variable.
-    F.push_back({ literal });
+    Formula leftSplitFormula = F;
+    leftSplitFormula.addClauseForLiteral(literal);
     assignments.push_back(literal);
-    if (!recursive(F, assignments).empty()) return assignments;
-    // If the TRUE value branching step did not yield a successfull assignment,
+    if (!recursive(leftSplitFormula, assignments).empty()) return assignments;
+    // If the TRUE value branching step did not yield a successful assignment,
     // we try the FALSE value for the same variable.
-    F[F.size()-1] = { -literal };
+    Formula rightSplitFormula = F;
+    rightSplitFormula.addClauseForLiteral(-literal);
     assignments[assignments.size()-1] = -literal;
-    return recursive(F, assignments);
+    return recursive(rightSplitFormula, assignments);
+}
+
+// Iterate through the clauses and maintain a state for which literals no counterpart is found.
+tuple<Formula, vector<int> > DavisPutnam::pureLiterals(Formula formula, vector<int> assignments) {
+    Formula newFormula = formula;
+    for (auto const& literalClauses : formula.literals) {
+        int literal = literalClauses.first;
+        // If the formula does not contain the opposite of the `literal`, we can
+        // say that `literal` is a pure literal. If so we set this `literal` to TRUE
+        // and simplify the formula.
+        if (formula.literals.count(-literal) != 1) {
+            assignments.push_back(literal);
+            newFormula = simplify(newFormula, literal);
+        }
+    }
+    return make_tuple(newFormula, assignments);
 }
 
 // For each unit clause in the Formula, set the literal from that clause to TRUE,
 // and simplify the Formula.
-tuple<vector<vector<int> >, vector<int>> DavisPutnam::unitPropagate(
-                                                                    vector<vector<int> > F, vector<int> assignments
-                                                                    ) {
-    vector<vector<int> > newF;
+tuple<Formula, vector<int> > DavisPutnam::unitPropagate(Formula formula, vector<int> assignments) {
+    vector<vector<int> > newF = F;
     for (auto const& clause : F) {
         if (clause.size() == 1) {
             int const literal = clause[0];
             // Simplify the Formula by removing all clauses containing the `literal`
             // and by removing the literal from a clause where it is `-literal`.
-            newF = simplify(F, literal);
+            newF = simplify(newF, literal);
             assignments.push_back(literal);
         }
     }
@@ -244,9 +281,9 @@ set<int> DavisPutnam::getVariables(vector<int> assignments) {
 }
 
 // Checks whether a given set of clauses contains an empty clause.
-bool DavisPutnam::containsEmptyClause(vector<vector<int> > F) {
-    return find_if(F.begin(), F.end(), [](vector<int> const& clause) {
-        return clause.empty();
-    }) != F.end();
-}
+//bool DavisPutnam::containsEmptyClause(vector<vector<int> > F) {
+//    return find_if(F.begin(), F.end(), [](vector<int> const& clause) {
+//        return clause.empty();
+//    }) != F.end();
+//}
 
