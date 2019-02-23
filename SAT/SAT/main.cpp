@@ -10,7 +10,7 @@
 #include <iostream>
 #include <vector>
 #include <set>
-#include <map>
+#include <map> //TODO replace this by unordered map?
 
 using namespace std;
 
@@ -28,7 +28,7 @@ class DavisPutnam {
     Formula formula;
     Formula setup                                   (Formula);
     vector<int> recursive                           (Formula, vector<int>);
-    tuple<Formula, vector<int>> pureLiterals        (Formula, vector<int>);
+    Formula pureLiterals                            (Formula);
     tuple<Formula, vector<int>> unitPropagate       (Formula, vector<int>);
     Formula simplify                                (Formula, int);
     Formula removeTautologies                       (Formula);
@@ -97,6 +97,17 @@ void printClauses(map<int, vector<int> > clauses) {
     }
 }
 
+void printVector(vector<int> vector) {
+    for (auto i = vector.begin(); i != vector.end(); ++i)
+        cout << *i << ' ';
+    cout << endl;
+}
+
+void printKeys(map<int, vector<int> > map) {
+    for (auto i = map.begin(); i != map.end(); ++i)
+        cout << i->first << ' ';
+}
+
 DavisPutnam::DavisPutnam(string strategy, Formula formula)
 : strategy(strategy), formula(formula) {
     // Initialize the recursive Davis Putnam algorithm with an empty set
@@ -106,22 +117,23 @@ DavisPutnam::DavisPutnam(string strategy, Formula formula)
     vector<int> finalAssignments = recursive(formula, assignments);
     cout << "The final assignment is: ";
     for (auto const& i: finalAssignments) {
-        cout << i << " ";
+        if (i > 0) cout << i << " ";
     }
     cout << endl;
+    cout << finalAssignments.size() << endl;
 }
 
 // Perform essential steps before starting the recursive Davis Putnam algorithm,
 // such as removing tautologies from the initial Formula.
 Formula DavisPutnam::setup(Formula formula) {
     formula = removeTautologies(formula); //TODO: fix this
-    // TODO: set all pure literals to true in our assignment.
+    formula = pureLiterals(formula);
     return formula;
 }
 
 vector<int> DavisPutnam::recursive(Formula formula, vector<int> assignments) {
     cout << " recursive call " << endl;
-    tie(formula, assignments) = pureLiterals(formula, assignments);
+    formula = pureLiterals(formula);
     tie(formula, assignments) = unitPropagate(formula, assignments);
     cout << "number of clauses left: " << formula.clauses.size() << endl;
     // When the set of clauses contains an empty clause, the problem is unsatisfiable.
@@ -131,6 +143,7 @@ vector<int> DavisPutnam::recursive(Formula formula, vector<int> assignments) {
     // We perform the branching step by picking a literal that is not yet included
     // in our partial assignment.
     int literal = getNextLiteral(formula.clauses, getVariables(assignments));
+    cout << "next literal: " << literal << endl;
     // Split into the TRUE value for the new variable.
     int newClauseNumber = getHighestKey(formula.clauses) + 1;
     formula.clauses.insert(pair<int, vector<int> >(newClauseNumber, vector<int> {literal}));
@@ -144,21 +157,54 @@ vector<int> DavisPutnam::recursive(Formula formula, vector<int> assignments) {
     return recursive(formula, assignments);
 }
 
-tuple<Formula, vector<int>> DavisPutnam::pureLiterals(Formula formula, vector<int> assignments) {
-    
-}
-
-// For each unit clause in the Formula, set the literal from that clause to TRUE,
-// and simplify the Formula.
-tuple<Formula, vector<int>> DavisPutnam::unitPropagate(Formula formula, vector<int> assignments) {
-    Formula newFormula = Formula { formula.clauses, formula.index };
-    for( auto const& [clauseNumber, clause] : formula.clauses ) {
-        if (clause.size() == 1) {
-            int const literal = clause[0];
-            newFormula = simplify(newFormula, literal);
+Formula DavisPutnam::pureLiterals(Formula formula) {
+    for (auto const& [literal, clauseNumbers] : formula.index) {
+        if (formula.index[-literal].size() == 0) {
+//            cout << "pure literal found: " << literal << endl;
+            int newClauseNumber = getHighestKey(formula.clauses) + 1;
+            formula.clauses.insert(pair<int, vector<int> >(newClauseNumber, vector<int> { literal }));
+            formula.index[literal].push_back(newClauseNumber);
         }
     }
-    return make_tuple(newFormula, assignments);
+    return formula;
+}
+
+tuple<Formula, vector<int>> DavisPutnam::unitPropagate(Formula formula, vector<int> assignments) {
+    vector<int> allClausesToDelete;
+    for (auto const& [clauseNumber, clause] : formula.clauses ) {
+        if (clause.size() == 1) {
+            int const subjectLiteral = clause[0];
+            vector<int> clausesToDelete = formula.index[subjectLiteral];
+            allClausesToDelete.insert(allClausesToDelete.end(), clausesToDelete.begin(), clausesToDelete.end());
+            if (!(find(allClausesToDelete.begin(), allClausesToDelete.end(), clauseNumber) != allClausesToDelete.end())) {
+                cout << "This should not happen!" << endl;
+                allClausesToDelete.push_back(clauseNumber);
+            }
+            formula.index.erase(subjectLiteral);
+            // Check if the negative of the literal exists in the index
+            if (formula.index.count(-subjectLiteral)) {
+                vector<int> clausesToDeleteLiteralFrom = formula.index[-subjectLiteral];
+                for (auto clauseNumber : clausesToDeleteLiteralFrom) {
+                    formula.clauses[clauseNumber].erase(remove(formula.clauses[clauseNumber].begin(), formula.clauses[clauseNumber].end(), -subjectLiteral), formula.clauses[clauseNumber].end()); //TODO: write a simple helper function to delete elements from vector
+                }
+                formula.index.erase(-subjectLiteral);
+            }
+            assignments.push_back(subjectLiteral);
+        }
+    }
+    cout << "final clauses to delete: " << allClausesToDelete.size() << endl;
+    cout << "clauses size: " << formula.clauses.size() << endl;
+    for (auto clauseNumber : allClausesToDelete) {
+        // Remove the clausenumber from the index
+        for (auto literal : formula.clauses[clauseNumber]) {
+            formula.index[literal].erase(remove(formula.index[literal].begin(), formula.index[literal].end(), clauseNumber), formula.index[literal].end());
+        }
+        // Remove the clause itself
+        formula.clauses.erase(clauseNumber);
+        
+    }
+    cout << "clauses size after delete: " << formula.clauses.size() << endl;
+    return make_tuple(formula, assignments);
 }
 
 // Simplify the Formula by removing all clauses containing the `literal`
