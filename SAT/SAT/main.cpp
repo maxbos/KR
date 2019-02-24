@@ -16,17 +16,77 @@
 #include <array>
 #include <set>
 #include <map>
+#include <memory>
 
 using namespace std;
 
 struct Formula {
     vector<vector<int> > clauses;
-    map<int, vector<vector<int >* > > literals;
+    map<int, vector<shared_ptr<vector<int> > > > literals;
     bool containsEmptyClause;
+    // Loop through the clause and remove the clause pointer for each literal within it.
+    // Then, erase the clause from `clauses`.
+    void eraseClause(shared_ptr<vector<int> > const& clause) {
+        for (auto const& literal : *clause) {
+            auto const& clausePtrs = literals[literal];
+            auto it = find(clausePtrs.begin(), clausePtrs.end(), clause);
+            if (it != clausePtrs.end()) {
+                literals[literal].erase(it);
+            }
+        }
+        auto it = find(clauses.begin(), clauses.end(), *clause);
+        if (it != clauses.end()) {
+            clauses.erase(it);
+        }
+    };
     void addClauseForLiteral(int literal) {
         clauses.push_back({ literal });
-        vector<int> *clausePtr = &clauses.back();
-        literals[literal].push_back(clausePtr);
+        literals[literal].push_back(make_shared<vector<int> >(clauses.back()));
+    };
+    // Erase each clause in which the given `literal` occurs. Finally, erase the `literal`
+    // key from the Formula.literals map.
+    void eraseClausesForLiteral(int literal) {
+        auto const clausesContainingLiteral = literals[literal];
+//        cout << clausesContainingLiteral.size() << endl;
+        for (auto const& clausePtr : clausesContainingLiteral) {
+//            cout << "clause ptr: " << &clausePtr << endl;
+            eraseClause(clausePtr);
+        }
+//        cout << "done erasing it" << endl;
+        literals.erase(literal);
+    };
+    // Erase the literal instances from the clauses in which the given `literal`
+    // occurs. If a clause remains empty after erasing, set the Formula.containsEmptyClause
+    // flag to TRUE. Finally, erase the `literal` key from the Formula.literals map.
+    void eraseLiteralInClauses(int literal) {
+        auto const clausesContainingLiteral = literals[literal];
+        for (auto const& clausePtr : clausesContainingLiteral) {
+            for (int i = 0; i < clausePtr->size(); i++) {
+                int l = clausePtr->at(i);
+                if (l == literal) {
+                    clausePtr->erase(clausePtr->begin() + i);
+                    // Important: check for an empty clause after erasing.
+                    if (clausePtr->empty()) {
+                        containsEmptyClause = true;
+                    }
+                    continue;
+                }
+            }
+        }
+        literals.erase(literal);
+    };
+    void printLiterals() {
+        for (auto const& literalClausePtrs : literals) {
+            cout << "literal: " << literalClausePtrs.first << endl;
+            for (auto const& clause : literalClausePtrs.second) {
+                cout << "clause: ";
+                for (auto const& l : *clause) {
+                    cout << l << " + ";
+                }
+                cout << endl;
+            }
+            cout << endl;
+        }
     };
 };
 
@@ -38,12 +98,11 @@ class DavisPutnam {
     string inputFilePath;
     Formula formula;
     Formula setup                                               (Formula);
+    Formula removeTautologies                                   (Formula);
     vector<int> recursive                                       (Formula, vector<int>);
     tuple<Formula, vector<int> > pureLiterals                   (Formula, vector<int>);
     tuple<Formula, vector<int> > unitPropagate                  (Formula, vector<int>);
     Formula simplify                                            (Formula, int);
-    Formula removeTautologies                                   (Formula);
-    vector<vector<int> > removeItemsByIndices                   (vector<vector<int> >, vector<int>);
     int getNextLiteral                                          (Formula, set<int>);
     set<int> getVariables                                       (vector<int>);
     
@@ -54,7 +113,9 @@ public:
 int main() {
     // TODO load the inputfile dynamically
     Formula formula = readDimacsFile("resources/1000-sudokus/1000.txt");
-//     printClauses(clauses);
+    cout << formula.literals.size() << endl;
+//     printClauses(formula.clauses);
+//    formula.printLiterals();
     DavisPutnam davisPutnam("S1", formula);
     return 0;
 }
@@ -75,14 +136,14 @@ Formula readDimacsFile(string loc) {
     
     int literal;
     int prevLiteral = 0;
-    vector<int> *lastClause;
+    shared_ptr<vector<int> > lastClause(nullptr);
     
     while (dimacsFile >> literal) {
         if (literal != 0) {
             if (prevLiteral == 0) {
                 vector<int> clause = { literal };
                 formula.clauses.push_back(clause);
-                lastClause = &formula.clauses.back();
+                lastClause = make_shared<vector<int> >(formula.clauses.back());
                 formula.literals[literal].push_back(lastClause);
             } else {
                 lastClause->push_back(literal);
@@ -167,7 +228,7 @@ tuple<Formula, vector<int> > DavisPutnam::pureLiterals(Formula formula, vector<i
         // If the formula does not contain the opposite of the `literal`, we can
         // say that `literal` is a pure literal. If so we set this `literal` to TRUE
         // and simplify the formula.
-        if (formula.literals.count(-literal) != 1) {
+        if (formula.literals.count(-literal) == 0) {
             assignments.push_back(literal);
             newFormula = simplify(newFormula, literal);
         }
@@ -178,92 +239,74 @@ tuple<Formula, vector<int> > DavisPutnam::pureLiterals(Formula formula, vector<i
 // For each unit clause in the Formula, set the literal from that clause to TRUE,
 // and simplify the Formula.
 tuple<Formula, vector<int> > DavisPutnam::unitPropagate(Formula formula, vector<int> assignments) {
-    vector<vector<int> > newF = F;
-    for (auto const& clause : F) {
-        if (clause.size() == 1) {
-            int const literal = clause[0];
-            // Simplify the Formula by removing all clauses containing the `literal`
-            // and by removing the literal from a clause where it is `-literal`.
-            newF = simplify(newF, literal);
-            assignments.push_back(literal);
+    Formula newFormula = formula;
+    for (auto const& literalClauses : formula.literals) {
+        auto const& literal = literalClauses.first;
+        auto const& clauses = literalClauses.second;
+        for (auto const& clausePtr : clauses) {
+            // If there is only one literal in the current clause, the clause is
+            // a unit clause. So, set the `literal` to TRUE and simplify the current
+            // state of the formula. Then, continue to the next literal in our literals-
+            // clause-pointers list.
+            if (clausePtr->size() == 1) {
+                assignments.push_back(literal);
+                newFormula = simplify(newFormula, literal);
+                continue;
+            }
         }
     }
-    return make_tuple(newF, assignments);
+    return make_tuple(newFormula, assignments);
 }
 
 // Simplify the Formula by removing all clauses containing the `literal`
 // and by removing the literal from a clause where it is `-literal`.
-vector<vector<int> > DavisPutnam::simplify(vector<vector<int> > F, int subjectLiteral) {
-    vector<vector<int> > newF = F;
-    int numberOfRemovedClauses = 0;
-    for (int i = 0; i < F.size(); i++) {
-        vector<int> const& clause = F[i];
-        int numberOfRemovedLiterals = 0;
-        for (int j = 0; j < clause.size(); j++) {
-            int const& literal = clause[j];
-            // Remove the clause if it contains the `subjectLiteral`, since this means
-            // the clause is TRUE.
-            if (literal == subjectLiteral) {
-                // Since the index `i` is based on the original Formula, erase the clause at
-                // index `i` adjusted by the number of already removed clauses.
-                newF.erase(newF.begin() + i - numberOfRemovedClauses);
-                numberOfRemovedClauses++;
-                // Remove the `literal` from its clause if it contains the opposite of the
-                // `subjectLiteral`, since this means the `literal` is FALSE.
-            } else if (literal == -subjectLiteral) {
-                // Since the index `j` is based on the original Clause, erase the literal
-                // at index `j` adjusted by the number of already removed literals within
-                // this clause.
-                vector<int> *newClause = &newF.at(i - numberOfRemovedClauses);
-                newClause->erase(newClause->begin() + j - numberOfRemovedLiterals);
-                numberOfRemovedLiterals++;
+Formula DavisPutnam::simplify(Formula formula, int subjectLiteral) {
+    Formula newFormula = formula;
+    // Remove all clauses that contain the `subjectLiteral`.
+    newFormula.eraseClausesForLiteral(subjectLiteral);
+    // Remove all -subjectLiteral instances from all clauses in which it occurs.
+    newFormula.eraseLiteralInClauses(-subjectLiteral);
+    return newFormula;
+}
+
+Formula DavisPutnam::removeTautologies(Formula formula) {
+    map<int, vector<shared_ptr<vector<int> > > > literals = formula.literals;
+    for (auto const& literalClauses : literals) {
+        auto const& literal = literalClauses.first;
+        if (literal > 0) {
+            // Find the FALSE instance of this literal.
+            if (formula.literals.count(-literal) > 0) {
+                auto const& clauses = literalClauses.second;
+                for (auto const& clausePtr : clauses) {
+                    // Find if the clause pointer also is contained within the
+                    // clauses-pointer-list of the `-literal`.
+                    auto oppLiteralClauses = formula.literals[-literal];
+                    if (find(oppLiteralClauses.begin(), oppLiteralClauses.end(), clausePtr) != oppLiteralClauses.end()) {
+                        formula.eraseClause(clausePtr);
+                    }
+                }
             }
         }
     }
-    return newF;
-}
-
-vector<vector<int> > DavisPutnam::removeTautologies(vector<vector<int> > F) {
-    vector<int> removeIndices;
-    for (int i = 0; i < F.size(); i++) {
-        vector<int> const& clause = F[i];
-        for (int const& literal : clause) {
-            if (find(clause.begin(), clause.end(), -literal) != clause.end()) {
-                removeIndices.push_back(i);
-            }
-        }
-    }
-    return removeItemsByIndices(F, removeIndices);
-}
-
-vector<vector<int> > DavisPutnam::removeItemsByIndices(vector<vector<int> > F, vector<int> removeIndices) {
-    // Sort the indices such that we can remove the highest indices first
-    sort(removeIndices.begin(), removeIndices.end(), greater<int>());
-    // Remove the clauses from the formula list
-    for (auto const& index : removeIndices) {
-        F.erase(F.begin() + index);
-    }
-    return F;
+    return formula;
 }
 
 // Based on the set heuristic, pick the next (TRUE) literal to branch into.
 // Iterate through the current formula (clauses set), and find the first variable (TRUE literal)
 // that is not yet already included in our current set of variables.
-int DavisPutnam::getNextLiteral(vector<vector<int> > F, set<int> currentVariables) {
+int DavisPutnam::getNextLiteral(Formula formula, set<int> currentVariables) {
     int nextLiteral;
-    for (auto const& clause : F) {
-        for (int const& literal : clause) {
-            // Find whether the variable (positive value of the literal) already is included
-            // in the current set of variables.
-            const bool literalIsAlreadyAssigned = find(
-                                                       currentVariables.begin(), currentVariables.end(), abs(literal)
-                                                       ) != currentVariables.end();
-            
-            if (!literalIsAlreadyAssigned) {
-                nextLiteral = abs(literal);
-                // Jump out of the nested for loops and return the next literal.
-                goto end;
-            }
+    for (auto const& literalClauses : formula.literals) {
+        auto const& literal = literalClauses.first;
+        // Find whether the variable (positive value of the literal) already is included
+        // in the current set of variables.
+        const bool literalIsAlreadyAssigned = find(
+                                                   currentVariables.begin(), currentVariables.end(), abs(literal)
+                                                   ) != currentVariables.end();
+        if (!literalIsAlreadyAssigned) {
+            nextLiteral = abs(literal);
+            // Jump out of the nested for loops and return the next literal.
+            goto end;
         }
     }
 end:
@@ -279,11 +322,3 @@ set<int> DavisPutnam::getVariables(vector<int> assignments) {
     }
     return variables;
 }
-
-// Checks whether a given set of clauses contains an empty clause.
-//bool DavisPutnam::containsEmptyClause(vector<vector<int> > F) {
-//    return find_if(F.begin(), F.end(), [](vector<int> const& clause) {
-//        return clause.empty();
-//    }) != F.end();
-//}
-
