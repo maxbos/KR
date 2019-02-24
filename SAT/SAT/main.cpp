@@ -120,7 +120,6 @@ DavisPutnam::DavisPutnam(string strategy, vector<vector<int> > clauses)
 // such as removing tautologies from the initial Formula.
 vector<vector<int> > DavisPutnam::setup(vector<vector<int> > F) {
     F = removeTautologies(F);
-    // TODO: set all pure literals to true in our assignment.
     return F;
 }
 
