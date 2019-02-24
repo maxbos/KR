@@ -15,6 +15,7 @@
 #include <iterator>
 #include <array>
 #include <set>
+#include <ctime>
 
 using namespace std;
 
@@ -41,7 +42,7 @@ public:
 
 int main() {
     // TODO load the inputfile dynamically
-    vector<vector<int> > clauses = readDimacsFile("resources/1000-sudokus/1.txt");
+    vector<vector<int> > clauses = readDimacsFile("resources/1000-sudokus/1001.txt");
 //     printClauses(clauses);
     DavisPutnam davisPutnam("S1", clauses);
     return 0;
@@ -93,12 +94,16 @@ void printClauses(vector<vector<int> > clauses) {
 
 DavisPutnam::DavisPutnam(string strategy, vector<vector<int> > clauses)
 : strategy(strategy), clauses(clauses) {
+    time_t tstart, tend;
+    tstart = time(0);
     // Initialize the recursive Davis Putnam algorithm with an empty set
     // of assignments.
     set<int> assignments;
     clauses = setup(clauses);
     set<int> finalAssignments = recursive(clauses, assignments);
-    cout << finalAssignments.size() << endl;
+    tend = time(0);
+    cout << "It took "<< difftime(tend, tstart) <<" second(s)."<< endl;
+    cout << "Number of assignments is: " << finalAssignments.size() << endl;
     cout << "The final assignment is: ";
     int count = 0;
     for (auto const& i: finalAssignments) {
@@ -107,7 +112,7 @@ DavisPutnam::DavisPutnam(string strategy, vector<vector<int> > clauses)
             cout << i << " ";
         }
     }
-    cout << endl << count << endl;
+    cout << endl << "Number of positive assignments: " << count << endl;
     cout << endl;
 }
 
@@ -120,11 +125,9 @@ vector<vector<int> > DavisPutnam::setup(vector<vector<int> > F) {
 }
 
 set<int> DavisPutnam::recursive(vector<vector<int> > clauses, set<int> assignments) {
-    cout << " recursive call " << endl;
     vector<vector<int> > F;
 //    tie(F, assignments) = pureLiterals(clauses, assignments);
     tie(F, assignments) = unitPropagate(clauses, assignments);
-    cout << "number of clauses left: " << F.size() << endl;
     // When the set of clauses contains an empty clause, the problem is unsatisfiable.
     if (containsEmptyClause(F)) return {};
     // We have found a successfull assignment when we have no clauses left.
