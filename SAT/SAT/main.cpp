@@ -142,7 +142,6 @@ set<int> DavisPutnam::recursive(vector<vector<int> > clauses, set<int> assignmen
     F[F.size()-1] = { -literal };
     assignments.erase(literal);
     assignments.insert(-literal);
-//    assignments[assignments.size()-1] = -literal;
     return recursive(F, assignments);
 }
 
