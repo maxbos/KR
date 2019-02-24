@@ -21,18 +21,38 @@ using namespace std;
 vector<vector<int> > readDimacsFile   (string);
 void printClauses                     (vector<vector<int> >);
 
+struct assignments {
+    vector<int> vals;
+    assignments() {};
+    assignments(vector<int> vals) : vals(vals) {};
+    // Only add the assignment if the structure does not yet contain
+    // this assignment.
+    void add(int assignment) { if (!contains(assignment)) vals.push_back(assignment); };
+    void modifyLast(int assignment) { vals[vals.size()-1] = assignment; };
+    bool contains(int assignment) { return find(vals.begin(), vals.end(), assignment) != vals.end(); };
+    bool empty() { return vals.empty(); };
+    // Calculates the absolute (TRUE) values of each assignment, which represents
+    // each literal.
+    set<int> getVariables() {
+        set<int> variables;
+        for (auto const& el : vals) {
+            variables.insert(abs(el));
+        }
+        return variables;
+    };
+};
+
 class DavisPutnam {
     string strategy;
     string inputFilePath;
     vector<vector<int> > clauses;
     vector<vector<int> > setup                                        (vector<vector<int> >);
-    vector<int> recursive                                             (vector<vector<int> >, vector<int>);
-    tuple<vector<vector<int> >, vector<int>> unitPropagate            (vector<vector<int> >, vector<int>);
+    assignments recursive                                             (vector<vector<int> >, assignments);
+    tuple<vector<vector<int> >, assignments> unitPropagate            (vector<vector<int> >, assignments);
     vector<vector<int> > simplify                                     (vector<vector<int> >, int);
     vector<vector<int> > removeTautologies                            (vector<vector<int> >);
     vector<vector<int> > removeItemsByIndices                         (vector<vector<int> >, vector<int>);
     int getNextLiteral                                                (vector<vector<int> >, set<int>);
-    set<int> getVariables                                             (vector<int>);
     bool containsEmptyClause                                          (vector<vector<int> >);
     
 public:
@@ -97,14 +117,11 @@ DavisPutnam::DavisPutnam(string strategy, vector<vector<int> > clauses)
     // of assignments.
     vector<int> assignments;
     clauses = setup(clauses);
-    vector<int> finalAssignments = recursive(clauses, assignments);
-//    finalAssignments.erase( unique( finalAssignments.begin(), finalAssignments.end() ), finalAssignments.end() );
-    set<int> s( finalAssignments.begin(), finalAssignments.end() );
-    finalAssignments.assign( s.begin(), s.end() );
-    cout << finalAssignments.size() << endl;
+    struct assignments finalAssignments = recursive(clauses, assignments);
+    cout << finalAssignments.vals.size() << endl;
     cout << "The final assignment is: ";
     int count = 0;
-    for (auto const& i: finalAssignments) {
+    for (auto const& i : finalAssignments.vals) {
         if (i > 0) {
             count++;
             cout << i << " ";
@@ -122,7 +139,7 @@ vector<vector<int> > DavisPutnam::setup(vector<vector<int> > F) {
     return F;
 }
 
-vector<int> DavisPutnam::recursive(vector<vector<int> > clauses, vector<int> assignments) {
+assignments DavisPutnam::recursive(vector<vector<int> > clauses, assignments assignments) {
     cout << " recursive call " << endl;
     vector<vector<int> > F;
 //    tie(F, assignments) = pureLiterals(clauses, assignments);
@@ -134,16 +151,16 @@ vector<int> DavisPutnam::recursive(vector<vector<int> > clauses, vector<int> ass
     if (F.empty()) return assignments;
     // We perform the branching step by picking a literal that is not yet included
     // in our partial assignment.
-    int literal = getNextLiteral(F, getVariables(assignments));
+    int literal = getNextLiteral(F, assignments.getVariables());
     // Split into the TRUE value for the new variable.
     F.push_back({ literal });
-    assignments.push_back(literal);
-    vector<int> leftSplitAssignments = recursive(F, assignments);
+    assignments.add(literal);
+    struct assignments leftSplitAssignments = recursive(F, assignments);
     if (!leftSplitAssignments.empty()) return leftSplitAssignments;
     // If the TRUE value branching step did not yield a successfull assignment,
     // we try the FALSE value for the same variable.
     F[F.size()-1] = { -literal };
-    assignments[assignments.size()-1] = -literal;
+    assignments.modifyLast(-literal);
     return recursive(F, assignments);
 }
 
@@ -190,8 +207,8 @@ vector<int> DavisPutnam::recursive(vector<vector<int> > clauses, vector<int> ass
 
 // For each unit clause in the Formula, set the literal from that clause to TRUE,
 // and simplify the Formula.
-tuple<vector<vector<int> >, vector<int>> DavisPutnam::unitPropagate(
-                                                                    vector<vector<int> > F, vector<int> assignments
+tuple<vector<vector<int> >, assignments> DavisPutnam::unitPropagate(
+                                                                    vector<vector<int> > F, assignments assignments
 ) {
     vector<vector<int> > newF = F;
     for (auto const& clause : F) {
@@ -200,7 +217,7 @@ tuple<vector<vector<int> >, vector<int>> DavisPutnam::unitPropagate(
             // Simplify the Formula by removing all clauses containing the `literal`
             // and by removing the literal from a clause where it is `-literal`.
             newF = simplify(newF, literal);
-            assignments.push_back(literal);
+            assignments.add(literal);
         }
     }
     return make_tuple(newF, assignments);
@@ -285,16 +302,6 @@ int DavisPutnam::getNextLiteral(vector<vector<int> > F, set<int> currentVariable
     }
 end:
     return nextLiteral;
-}
-
-// Calculates the absolute (TRUE) values of each assignment, which represents
-// each literal.
-set<int> DavisPutnam::getVariables(vector<int> assignments) {
-    set<int> variables;
-    for (auto const& el : assignments) {
-        variables.insert(abs(el));
-    }
-    return variables;
 }
 
 // Checks whether a given set of clauses contains an empty clause.
