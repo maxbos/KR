@@ -8,7 +8,7 @@
 .vscode/*
 
 # Binaries
-./SAT
+SAT
 preprocess
 
 # Output files
@@ -20,3 +20,6 @@ preprocess
 
 # Xcode files
 xcuserdata/
+
+# SAT solver output
+filename.out
