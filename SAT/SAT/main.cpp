@@ -21,6 +21,7 @@ using namespace std;
 
 vector<vector<int> > readDimacsFile   (string);
 void printClauses                     (vector<vector<int> >);
+tuple<string, string> parseArguments  (int, char*[]);
 
 class DavisPutnam {
     string strategy;
@@ -40,13 +41,26 @@ public:
     DavisPutnam                         (string strategy, vector<vector<int> > clauses);
 };
 
-int main() {
-    // TODO load the inputfile dynamically
-    vector<vector<int> > clauses = readDimacsFile("resources/1000-sudokus/1001.txt");
+int main(int argc, char* argv[]) {
+    string strategy, inputfile;
+    tie(strategy, inputfile) = parseArguments(argc, argv);
+    vector<vector<int> > clauses = readDimacsFile(inputfile);
 //     printClauses(clauses);
-    DavisPutnam davisPutnam("S1", clauses);
+    DavisPutnam davisPutnam(strategy, clauses);
     return 0;
 }
+
+// Parse input arguments as strategy and inputfile
+tuple<string, string> parseArguments(int argc, char* argv[]) {
+    if (argc != 3) {
+        cout << "Usage: SAT <strategy> <inputfile>" << endl;
+        exit(1);
+    }
+    string strategy = argv[1];
+    string inputfile = argv[2];
+    return make_tuple(strategy, inputfile);
+}
+
 
 // Reads and parses a DIMACS file from a given file location.
 // The DIMACS clauses are stored as a (formula) vector of clause
