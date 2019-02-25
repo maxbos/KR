@@ -28,6 +28,7 @@ class DavisPutnam {
     string inputFilePath;
     vector<vector<int> > clauses;
     vector<vector<int> > setup                                          (vector<vector<int> >);
+    string saveOutput                                                   (set<int>);
     set<int> recursive                                                  (vector<vector<int> >, set<int>);
     tuple<vector<vector<int> >, set<int> > unitPropagate                (vector<vector<int> >, set<int>);
     vector<vector<int> > simplify                                       (vector<vector<int> >, int);
@@ -127,6 +128,8 @@ DavisPutnam::DavisPutnam(string strategy, vector<vector<int> > clauses)
         }
     }
     cout << endl << "Number of positive assignments: " << count << endl;
+    string filename = saveOutput(finalAssignments);
+    cout << "Assignments written to file: " << filename << endl;
     cout << endl;
 }
 
@@ -135,6 +138,19 @@ DavisPutnam::DavisPutnam(string strategy, vector<vector<int> > clauses)
 vector<vector<int> > DavisPutnam::setup(vector<vector<int> > F) {
     F = removeTautologies(F);
     return F;
+}
+
+// Save outputs to file
+string DavisPutnam::saveOutput(set<int> assignments) {
+    string filename = "filename.out";
+    ofstream outputfile;
+    outputfile.open(filename);
+    outputfile << "p cnf " << assignments.size() << " " << assignments.size() << endl;
+    for (int assignment : assignments) {
+        outputfile << assignment << " 0" << endl;
+    }
+    outputfile.close();
+    return filename;
 }
 
 set<int> DavisPutnam::recursive(vector<vector<int> > clauses, set<int> assignments) {
