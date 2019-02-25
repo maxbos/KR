@@ -27,6 +27,7 @@ class DavisPutnam {
     string strategy;
     string inputFilePath;
     vector<vector<int> > clauses;
+    int lef_variable;
     vector<vector<int> > setup                                          (vector<vector<int> >);
     string saveOutput                                                   (set<int>);
     set<int> recursive                                                  (vector<vector<int> >, set<int>);
@@ -35,6 +36,8 @@ class DavisPutnam {
     vector<vector<int> > removeTautologies                              (vector<vector<int> >);
     vector<vector<int> > removeItemsByIndices                           (vector<vector<int> >, vector<int>);
     int getNextLiteral                                                  (vector<vector<int> >, set<int>);
+    int getNextRandomLiteral                                            (vector<vector<int> >, set<int>);
+    set<int> getLiterals                                                (vector<vector<int> >);
     set<int> getVariables                                               (set<int>);
     bool containsEmptyClause                                            (vector<vector<int> >);
     
@@ -233,6 +236,15 @@ tuple<vector<vector<int> >, set<int>> DavisPutnam::unitPropagate(
             assignments.insert(literal);
         }
     }
+    if (strategy == "-S2" && !F.empty()) {
+        for (auto it = F.rbegin(); it != F.rend(); ++it) {
+            if ((*it).empty()) continue;
+            if ((*it).back() == lef_variable) continue;
+            lef_variable = (*it).back();
+            break;
+            
+        }
+    }
     return make_tuple(newF, assignments);
 }
 
@@ -297,24 +309,47 @@ vector<vector<int> > DavisPutnam::removeItemsByIndices(vector<vector<int> > F, v
 // Iterate through the current formula (clauses set), and find the first variable (TRUE literal)
 // that is not yet already included in our current set of variables.
 int DavisPutnam::getNextLiteral(vector<vector<int> > F, set<int> currentVariables) {
-    int nextLiteral;
-    for (auto const& clause : F) {
-        for (int const& literal : clause) {
-            // Find whether the variable (positive value of the literal) already is included
-            // in the current set of variables.
-            const bool literalIsAlreadyAssigned = find(
-                                                       currentVariables.begin(), currentVariables.end(), abs(literal)
-                                                       ) != currentVariables.end();
-            
-            if (!literalIsAlreadyAssigned) {
-                nextLiteral = abs(literal);
-                // Jump out of the nested for loops and return the next literal.
-                goto end;
+    if (strategy == "-S1") {
+        int nextLiteral;
+        for (auto const& clause : F) {
+            for (int const& literal : clause) {
+                // Find whether the variable (positive value of the literal) already is included
+                // in the current set of variables.
+                const bool literalIsAlreadyAssigned = find(
+                                                           currentVariables.begin(), currentVariables.end(), abs(literal)
+                                                           ) != currentVariables.end();
+                
+                if (!literalIsAlreadyAssigned) {
+                    nextLiteral = abs(literal);
+                    // Jump out of the nested for loops and return the next literal.
+                    goto end;
+                }
             }
         }
+    end:
+        return nextLiteral;
+    } else if (strategy == "-S2") {
+        if (currentVariables.find(abs(lef_variable)) == currentVariables.end()) {
+            return lef_variable;
+        } else {
+            return getNextRandomLiteral(F, currentVariables);
+        }
     }
-end:
-    return nextLiteral;
+    // No valid strategy specified
+    return 0;
+    
+}
+
+int DavisPutnam::getNextRandomLiteral(vector<vector<int> > F, set<int> currentVariables) {
+    set<int> literals = getLiterals(F);
+    int next_literal;
+    set<int>::const_iterator it(literals.begin());
+    do {
+        int rand_idx = rand() % literals.size();
+        advance(it, rand_idx);
+        next_literal = *it;
+    } while(find(currentVariables.begin(), currentVariables.end(), abs(next_literal)) != currentVariables.end());
+    return next_literal;
 }
 
 // Calculates the absolute (TRUE) values of each assignment, which represents
@@ -325,6 +360,13 @@ set<int> DavisPutnam::getVariables(set<int> assignments) {
         variables.insert(abs(el));
     }
     return variables;
+}
+
+set<int> DavisPutnam::getLiterals(vector<vector<int> > F) {
+    set<int> ret;
+    for(const auto &v: F)
+        ret.insert(v.begin(), v.end());
+    return ret;
 }
 
 // Checks whether a given set of clauses contains an empty clause.
