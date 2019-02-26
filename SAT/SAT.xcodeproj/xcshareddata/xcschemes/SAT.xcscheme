@@ -69,6 +69,10 @@
          </CommandLineArgument>
          <CommandLineArgument
             argument = "resources/1000-sudokus/1000.txt"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "resources/0.txt"
             isEnabled = "YES">
          </CommandLineArgument>
       </CommandLineArguments>
