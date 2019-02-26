@@ -23,11 +23,14 @@ struct formula {
     vector<vector<int> > clauses;
     void push_back(vector<int> clause) { clauses.push_back(clause); };
     void pop_back() { clauses.pop_back(); };
+    void insert(formula f2) {
+        clauses.insert(clauses.end(), f2.clauses.begin(), f2.clauses.end());
+    };
 };
 
-formula readDimacsFile   (string);
-void printClauses                     (vector<vector<int> >);
-tuple<string, string> parseArguments  (int, char*[]);
+formula readDimacsFile                  (string);
+void printClauses                       (vector<vector<int> >);
+tuple<string, string> parseArguments    (int, char*[]);
 
 class DavisPutnam {
     string strategy;
@@ -56,6 +59,10 @@ int main(int argc, char* argv[]) {
     string strategy, inputfile;
     tie(strategy, inputfile) = parseArguments(argc, argv);
     formula formula = readDimacsFile(inputfile);
+    if (strategy == "-S3") {
+        struct formula xSudokuRules = readDimacsFile("resources/x-sudoku-rules.txt");
+        formula.insert(xSudokuRules);
+    }
 //     printClauses(clauses);
     DavisPutnam davisPutnam(strategy, formula, inputfile);
     return 0;
