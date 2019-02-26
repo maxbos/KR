@@ -64,11 +64,15 @@
       </BuildableProductRunnable>
       <CommandLineArguments>
          <CommandLineArgument
-            argument = "-S3"
+            argument = "-S2"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "resources/x-sudoku.txt"
+            argument = "resources/1000-sudokus/"
+            isEnabled = "YES">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "30"
             isEnabled = "YES">
          </CommandLineArgument>
       </CommandLineArguments>

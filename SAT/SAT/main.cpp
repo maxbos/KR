@@ -16,6 +16,7 @@
 #include <array>
 #include <set>
 #include <ctime>
+#include <numeric>
 
 using namespace std;
 
@@ -28,15 +29,16 @@ struct formula {
     };
 };
 
-formula readDimacsFile                  (string);
-void printClauses                       (vector<vector<int> >);
-tuple<string, string> parseArguments    (int, char*[]);
+formula readDimacsFile                      (string);
+void printClauses                           (vector<vector<int> >);
+tuple<string, string, int> parseArguments   (int, char*[]);
+float vectorMean                            (vector<int>);
 
 class DavisPutnam {
     string strategy;
     string inputFilePath;
-    int lef_variable;
-    int backtrack_count = 0;
+    int lefVariable;
+    int backtrackCount = 0;
     formula setup                                          (formula);
     string saveOutput                                      (set<int>);
     set<int> recursive                                     (formula, set<int>);
@@ -50,33 +52,36 @@ class DavisPutnam {
     set<int> getLiterals                                   (formula);
     set<int> getVariables                                  (set<int>);
     bool containsEmptyClause                               (formula);
+    void printAssignments                                   (set<int>);
     
 public:
-    DavisPutnam                         (string, formula, string);
+    DavisPutnam                         (string, string, int);
 };
 
 int main(int argc, char* argv[]) {
     string strategy, inputfile;
-    tie(strategy, inputfile) = parseArguments(argc, argv);
-    formula formula = readDimacsFile(inputfile);
-    if (strategy == "-S3") {
-        struct formula xSudokuRules = readDimacsFile("resources/x-sudoku-rules.txt");
-        formula.insert(xSudokuRules);
-    }
+    int numberOfRuns;
+    tie(strategy, inputfile, numberOfRuns) = parseArguments(argc, argv);
 //     printClauses(clauses);
-    DavisPutnam davisPutnam(strategy, formula, inputfile);
+    DavisPutnam davisPutnam(strategy, inputfile, numberOfRuns);
     return 0;
 }
 
 // Parse input arguments as strategy and inputfile
-tuple<string, string> parseArguments(int argc, char* argv[]) {
-    if (argc != 3) {
+tuple<string, string, int> parseArguments(int argc, char* argv[]) {
+    if (argc < 3) {
         cout << "Usage: SAT <strategy> <inputfile>" << endl;
         exit(1);
     }
     string strategy = argv[1];
     string inputfile = argv[2];
-    return make_tuple(strategy, inputfile);
+    int numberOfRuns;
+    if (argc == 4) {
+        numberOfRuns = atoi(argv[3]);
+    } else {
+        numberOfRuns = 1;
+    }
+    return make_tuple(strategy, inputfile, numberOfRuns);
 }
 
 
@@ -125,32 +130,51 @@ void printClauses(vector<vector<int> > clauses) {
     }
 }
 
-DavisPutnam::DavisPutnam(string strategy, formula formula, string inputFilePath)
+float vectorMean(vector<int> v) {
+    return accumulate(v.begin(), v.end(), 0.0)/v.size();
+}
+
+DavisPutnam::DavisPutnam(string strategy, string inputFilePath, int numberOfRuns)
 : strategy(strategy), inputFilePath(inputFilePath) {
     time_t tstart, tend;
-    tstart = time(0);
-    // Initialize the recursive Davis Putnam algorithm with an empty set
-    // of assignments.
-    set<int> assignments;
-    struct formula newFormula = formula;
-    newFormula = setup(newFormula);
-    set<int> finalAssignments = recursive(newFormula, assignments);
-    tend = time(0);
-    cout << "It took "<< difftime(tend, tstart) <<" second(s)."<< endl;
-    cout << "Number of assignments is: " << finalAssignments.size() << endl;
-    cout << "The final assignment is: ";
-    int count = 0;
-    for (auto const& i: finalAssignments) {
-        if (i > 0) {
-            count++;
-            cout << i << " ";
+    vector<int> runTimes;
+    vector<int> backtracks;
+    for (int i = 0; i < numberOfRuns; i++) {
+        // Reset metrics
+        tstart = time(0);
+        backtrackCount = 0;
+        // Initialize the recursive Davis Putnam algorithm with an empty set
+        // of assignments.
+        set<int> assignments;
+        string inputFile;
+        if (numberOfRuns == 1) {
+            inputFile = inputFilePath;
+        } else {
+            // Assume the inputFilePath is a folder and the problems are .txt files
+            // with a number as name
+            inputFile = inputFilePath + to_string(i) + ".txt";
+        }
+        formula formula = readDimacsFile(inputFile);
+        if (strategy == "-S3") {
+            struct formula xSudokuRules = readDimacsFile("resources/x-sudoku-rules.txt");
+            formula.insert(xSudokuRules);
+        }
+        struct formula newFormula = formula;
+        newFormula = setup(newFormula);
+        set<int> finalAssignments = recursive(newFormula, assignments);
+        tend = time(0);
+        runTimes.push_back(difftime(tend, tstart));
+        backtracks.push_back(backtrackCount);
+        if (numberOfRuns == 1) {
+            printAssignments(finalAssignments);
+            string filename = saveOutput(finalAssignments);
+            cout << "Assignments written to file: " << filename << endl;
         }
     }
-    cout << endl << "Number of positive assignments: " << count << endl;
-    string filename = saveOutput(finalAssignments);
-    cout << "Assignments written to file: " << filename << endl;
-    cout << "Number of backtracks: " << backtrack_count << endl;
-    cout << endl;
+    float meanRunTime = vectorMean(runTimes);
+    double meanBacktracks = vectorMean(backtracks);
+    cout << "(Average) runtime: "<< meanRunTime <<" second(s)."<< endl;
+    cout << "(Average) number of backtracks: " << meanBacktracks << endl;
 }
 
 // Perform essential steps before starting the recursive Davis Putnam algorithm,
@@ -192,7 +216,7 @@ set<int> DavisPutnam::recursive(formula formula, set<int> assignments) {
     assignments.insert(literal);
     set<int> leftSplitAssignments = recursive(newFormula, assignments);
     if (!leftSplitAssignments.empty()) return leftSplitAssignments;
-    backtrack_count++;
+    backtrackCount++;
     // If the TRUE value branching step did not yield a successfull assignment,
     // we try the FALSE value for the same variable.
     newFormula.pop_back();
@@ -234,8 +258,8 @@ tuple<formula, set<int> > DavisPutnam::unitPropagate(formula formula, set<int> a
     if (strategy == "-S2" && !new_formula.clauses.empty()) {
         for (auto it = new_formula.clauses.rbegin(); it != new_formula.clauses.rend(); ++it) {
             if ((*it).empty()) continue;
-            if ((*it).back() == lef_variable) continue;
-            lef_variable = (*it).back();
+            if ((*it).back() == lefVariable) continue;
+            lefVariable = (*it).back();
             break;
         }
     }
@@ -324,8 +348,8 @@ int DavisPutnam::getNextLiteral(formula formula, set<int> currentVariables) {
     end:
         return nextLiteral;
     } else if (strategy == "-S2") {
-        if (currentVariables.find(abs(lef_variable)) == currentVariables.end()) {
-            return lef_variable;
+        if (currentVariables.find(abs(lefVariable)) == currentVariables.end()) {
+            return lefVariable;
         } else {
             return getNextRandomLiteral(formula, currentVariables);
         }
@@ -368,4 +392,18 @@ bool DavisPutnam::containsEmptyClause(formula F) {
     return find_if(F.clauses.begin(), F.clauses.end(), [](vector<int> const& clause) {
         return clause.empty();
     }) != F.clauses.end();
+}
+
+void DavisPutnam::printAssignments(set<int> assignments) {
+    cout << "Number of assignments is: " << assignments.size() << endl;
+    cout << "The final assignment is: ";
+    int count = 0;
+    for (auto const& i: assignments) {
+        if (i > 0) {
+            count++;
+            cout << i << " ";
+        }
+    }
+    cout << endl;
+    cout << endl << "Number of positive assignments: " << count << endl;
 }
