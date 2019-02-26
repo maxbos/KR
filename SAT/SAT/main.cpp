@@ -142,7 +142,7 @@ DavisPutnam::DavisPutnam(string strategy, formula formula, string inputFilePath)
     cout << endl << "Number of positive assignments: " << count << endl;
     string filename = saveOutput(finalAssignments);
     cout << "Assignments written to file: " << filename << endl;
-    cout << "N recursions: " << recursion_count << endl;
+    cout << "Number of backtracks: " << backtrack_count << endl;
     cout << endl;
 }
 
@@ -202,10 +202,8 @@ set<int> DavisPutnam::recursive(formula formula, set<int> assignments) {
 tuple<formula, set<int> > DavisPutnam::pureLiterals(formula formula, set<int> assignments) {
     struct formula new_formula = formula;
     set<int> literals = getLiterals(formula);
-    cout << "pure literals: " << literals.size() << endl;
     for (auto const& literal : literals) {
         if (find(literals.begin(), literals.end(), -literal) == literals.end()) {
-            cout << "found a pure literal -> " << literal << endl;
             new_formula = simplify(new_formula, literal);
             assignments.insert(literal);
         }
