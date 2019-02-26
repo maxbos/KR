@@ -33,9 +33,11 @@ class DavisPutnam {
     string strategy;
     string inputFilePath;
     int lef_variable;
+    int backtrack_count = 0;
     formula setup                                          (formula);
     string saveOutput                                      (set<int>);
     set<int> recursive                                     (formula, set<int>);
+    tuple<formula, set<int> > pureLiterals                 (formula, set<int>);
     tuple<formula, set<int> > unitPropagate                (formula, set<int>);
     formula simplify                                       (formula, int);
     formula removeTautologies                              (formula);
@@ -140,6 +142,7 @@ DavisPutnam::DavisPutnam(string strategy, formula formula, string inputFilePath)
     cout << endl << "Number of positive assignments: " << count << endl;
     string filename = saveOutput(finalAssignments);
     cout << "Assignments written to file: " << filename << endl;
+    cout << "N recursions: " << recursion_count << endl;
     cout << endl;
 }
 
@@ -163,9 +166,12 @@ string DavisPutnam::saveOutput(set<int> assignments) {
     return filename;
 }
 
+/**
+ *
+ */
 set<int> DavisPutnam::recursive(formula formula, set<int> assignments) {
     struct formula newFormula = formula;
-//    tie(F, assignments) = pureLiterals(clauses, assignments);
+    tie(newFormula, assignments) = pureLiterals(newFormula, assignments);
     tie(newFormula, assignments) = unitPropagate(newFormula, assignments);
     // When the set of clauses contains an empty clause, the problem is unsatisfiable.
     if (containsEmptyClause(newFormula)) return {};
@@ -175,14 +181,13 @@ set<int> DavisPutnam::recursive(formula formula, set<int> assignments) {
     // in our partial assignment.
     int literal = getNextLiteral(newFormula, getVariables(assignments));
     // Split into the TRUE value for the new variable.
-//    newFormula.push_back({ literal });
     newFormula.push_back({ literal });
     assignments.insert(literal);
     set<int> leftSplitAssignments = recursive(newFormula, assignments);
     if (!leftSplitAssignments.empty()) return leftSplitAssignments;
+    backtrack_count++;
     // If the TRUE value branching step did not yield a successfull assignment,
     // we try the FALSE value for the same variable.
-//    F[F.size()-1] = { -literal };
     newFormula.pop_back();
     newFormula.push_back({ -literal });
     assignments.erase(literal);
@@ -190,50 +195,27 @@ set<int> DavisPutnam::recursive(formula formula, set<int> assignments) {
     return recursive(newFormula, assignments);
 }
 
-// Iterate through the clauses and maintain a state for which literals no counterpart is found.
-//tuple<vector<vector<int> >, vector<int>> DavisPutnam::pureLiterals(
-//                                                                   vector<vector<int> > F, vector<int> assignments
-//                                                                   ) {
-//    vector<int> foundLiterals;
-//    vector<int> discardLiterals;
-//    for (auto const& clause : F) {
-//        for (auto const& literal : clause) {
-//            // If the literal is in our discardList we discard this literal.
-//            if (find(discardLiterals.begin(), discardLiterals.end(), literal) != discardLiterals.end()) {
-//                continue;
-//            }
-//            // If the opposite of the literal is in our list we discard this literal
-//            // and we remove the literal from our foundLiterals.
-//            if (find(foundLiterals.begin(), foundLiterals.end(), -literal) != foundLiterals.end()) {
-//                discardLiterals.push_back(literal);
-//                discardLiterals.push_back(-literal);
-//                foundLiterals.erase(remove(foundLiterals.begin(), foundLiterals.end(), literal), foundLiterals.end());
-//                foundLiterals.erase(remove(foundLiterals.begin(), foundLiterals.end(), -literal), foundLiterals.end());
-//            // If the literal is not yet in our list we add it.
-//            } else if (!(find(foundLiterals.begin(), foundLiterals.end(), literal) != foundLiterals.end())) {
-//                foundLiterals.push_back(literal);
-//            }
-//        }
-//    }
-//    vector<vector<int> > newF = F;
-//    for (auto const& clause : F) {
-//        for (auto const& literal : clause) {
-//            // If the literal is in our foundLiterals list we
-//            if (find(foundLiterals.begin(), foundLiterals.end(), literal) != foundLiterals.end()) {
-//                int const literal = clause[0];
-//                // Simplify the Formula by removing all clauses containing the `literal`
-//                // and by removing the literal from a clause where it is `-literal`.
-//                newF = simplify(newF, literal);
-//                assignments.push_back(literal);
-//            }
-//        }
-//    }
-//    return make_tuple(newF, assignments);
-//}
+/**
+ * If a literal has no counter part, set this literal in our assignments and simplify
+ * the formula for this literal.
+ */
+tuple<formula, set<int> > DavisPutnam::pureLiterals(formula formula, set<int> assignments) {
+    struct formula new_formula = formula;
+    set<int> literals = getLiterals(formula);
+    cout << "pure literals: " << literals.size() << endl;
+    for (auto const& literal : literals) {
+        if (find(literals.begin(), literals.end(), -literal) == literals.end()) {
+            cout << "found a pure literal -> " << literal << endl;
+            new_formula = simplify(new_formula, literal);
+            assignments.insert(literal);
+        }
+    }
+    return make_tuple(new_formula, assignments);
+}
 
 // For each unit clause in the Formula, set the literal from that clause to TRUE,
 // and simplify the Formula.
-tuple<formula, set<int>> DavisPutnam::unitPropagate(formula formula, set<int> assignments) {
+tuple<formula, set<int> > DavisPutnam::unitPropagate(formula formula, set<int> assignments) {
     struct formula new_formula = formula;
     for (auto const& clause : formula.clauses) {
         if (clause.size() == 1) {
