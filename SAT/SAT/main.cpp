@@ -71,7 +71,7 @@ public:
 int main(int argc, char* argv[]) {
     string strategy, inputfile;
     int numberOfRuns;
-    vector<int> runtimes, backtracks;
+    vector<int> runtimes, backtracks, backtracksLastTree, rootVisits;
     tie(strategy, inputfile, numberOfRuns) = parseArguments(argc, argv);
     bool saveFinalAssignments = numberOfRuns == 1;
     for (int i = 0; i < numberOfRuns; i++) {
@@ -79,11 +79,17 @@ int main(int argc, char* argv[]) {
         DavisPutnam davisPutnam(strategy, inputfile, saveFinalAssignments);
         runtimes.push_back(davisPutnam.stats.runtime);
         backtracks.push_back(davisPutnam.stats.nBacktracks);
+        backtracksLastTree.push_back(davisPutnam.stats.nBacktracksLastTree);
+        rootVisits.push_back(davisPutnam.stats.nRootVisits);
     }
     float meanRuntime = vectorMean(runtimes);
     double meanBacktracks = vectorMean(backtracks);
+    double meanBacktracksLastTree = vectorMean(backtracksLastTree);
+    double meanRootVisits = vectorMean(rootVisits);
     cout << "(Average) runtime: " << meanRuntime << " second(s)."<< endl;
     cout << "(Average) number of backtracks: " << meanBacktracks << endl;
+    cout << "(Average) number of backtracks in last tree: " << meanBacktracksLastTree << endl;
+    cout << "(Average) number of root visits: " << meanRootVisits << endl;
     return 0;
 }
 
@@ -142,6 +148,7 @@ string DavisPutnam::saveOutput() {
  *
  */
 set<int> DavisPutnam::recursive(formula formula, set<int> assignments) {
+    if (assignments.empty()) { stats.nRootVisits++; stats.nBacktracksLastTree = 0; }
     struct formula newFormula = formula;
     tie(newFormula, assignments) = pureLiterals(newFormula, assignments);
     tie(newFormula, assignments) = unitPropagate(newFormula, assignments);
@@ -158,6 +165,7 @@ set<int> DavisPutnam::recursive(formula formula, set<int> assignments) {
     set<int> leftSplitAssignments = recursive(newFormula, assignments);
     if (!leftSplitAssignments.empty()) return leftSplitAssignments;
     stats.nBacktracks++;
+    stats.nBacktracksLastTree++;
     // If the TRUE value branching step did not yield a successfull assignment,
     // we try the FALSE value for the same variable.
     newFormula.pop_back();
