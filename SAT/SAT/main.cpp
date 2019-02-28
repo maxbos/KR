@@ -57,6 +57,7 @@ class DavisPutnam {
     
 public:
     struct metrics {
+        int nUnsatisfiable;
         int nRootVisits;
         int nSudokuEdits;
         int nBacktracks;
@@ -71,7 +72,7 @@ public:
 int main(int argc, char* argv[]) {
     string strategy, inputfile;
     int numberOfRuns;
-    vector<int> runtimes, backtracks, backtracksLastTree, rootVisits;
+    vector<int> runtimes, backtracks, backtracksLastTree, rootVisits, unsatisfiables;
     tie(strategy, inputfile, numberOfRuns) = parseArguments(argc, argv);
     bool saveFinalAssignments = numberOfRuns == 1;
     for (int i = 0; i < numberOfRuns; i++) {
@@ -81,15 +82,18 @@ int main(int argc, char* argv[]) {
         backtracks.push_back(davisPutnam.stats.nBacktracks);
         backtracksLastTree.push_back(davisPutnam.stats.nBacktracksLastTree);
         rootVisits.push_back(davisPutnam.stats.nRootVisits);
+        unsatisfiables.push_back(davisPutnam.stats.nUnsatisfiable);
     }
     float meanRuntime = vectorMean(runtimes);
     double meanBacktracks = vectorMean(backtracks);
     double meanBacktracksLastTree = vectorMean(backtracksLastTree);
     double meanRootVisits = vectorMean(rootVisits);
+    double meanUnsatisfiables = vectorMean(unsatisfiables);
     cout << "(Average) runtime: " << meanRuntime << " second(s)."<< endl;
     cout << "(Average) number of backtracks: " << meanBacktracks << endl;
     cout << "(Average) number of backtracks in last tree: " << meanBacktracksLastTree << endl;
     cout << "(Average) number of root visits: " << meanRootVisits << endl;
+    cout << "(Average) number of unsatisfiables: " << meanUnsatisfiables << endl;
     return 0;
 }
 
@@ -153,7 +157,7 @@ set<int> DavisPutnam::recursive(formula formula, set<int> assignments) {
     tie(newFormula, assignments) = pureLiterals(newFormula, assignments);
     tie(newFormula, assignments) = unitPropagate(newFormula, assignments);
     // When the set of clauses contains an empty clause, the problem is unsatisfiable.
-    if (containsEmptyClause(newFormula)) return {};
+    if (containsEmptyClause(newFormula)) { stats.nUnsatisfiable++; return {}; };
     // We have found a successfull assignment when we have no clauses left.
     if (newFormula.clauses.empty()) return assignments;
     // We perform the branching step by picking a literal that is not yet included
