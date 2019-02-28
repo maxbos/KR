@@ -56,6 +56,7 @@ class DavisPutnam {
     bool containsEmptyClause                                (formula);
     void printAssignments                                   (set<int>);
     formula attemptFormulaFix                               (formula);
+    formula randomFormulaFix                                (formula);
     
 public:
     struct metrics {
@@ -134,7 +135,31 @@ DavisPutnam::DavisPutnam(string strategy, string inputFilePath, bool saveFinalAs
  */
 formula DavisPutnam::attemptFormulaFix(formula formula) {
     cout << "trying to fix the formula" << endl;
-    return formula;
+    return randomFormulaFix(formula);
+}
+
+/**
+ * Erases assignments from the given formula for a given probability.
+ */
+formula DavisPutnam::randomFormulaFix(formula formula) {
+    int nRemovedClauses = 0;
+    struct formula newFormula = formula;
+    for (int i = 0; i < formula.clauses.size(); i++) {
+        auto const& clause = formula.clauses.at(i);
+        // We have found a position assignment. Delete this assignment with a probability
+        // of 0.4.
+        if (clause.size() == 1) {
+            int const randomNumber = (rand() % (10 + 1 - 1)) + 1;
+            if (randomNumber < 6) {
+                newFormula.clauses.erase(newFormula.clauses.begin() + i - nRemovedClauses);
+                nRemovedClauses++;
+                goto end;
+            }
+        }
+    }
+    end:
+    cout << "Removed " << nRemovedClauses << " assignments" << endl;
+    return newFormula;
 }
 
 /**
