@@ -37,10 +37,11 @@ float vectorMean                            (vector<int>);
 class DavisPutnam {
     string strategy;
     string inputFilePath;
+    bool saveFinalAssignments;
     int lefVariable;
     int backtrackCount = 0;
     formula setup                                          (formula);
-    string saveOutput                                      (set<int>);
+    string saveOutput                                      ();
     set<int> recursive                                     (formula, set<int>);
     tuple<formula, set<int> > pureLiterals                 (formula, set<int>);
     tuple<formula, set<int> > unitPropagate                (formula, set<int>);
@@ -55,145 +56,85 @@ class DavisPutnam {
     void printAssignments                                   (set<int>);
     
 public:
-    DavisPutnam                         (string, string, int);
+    struct metrics {
+        int nRootVisits;
+        int nSudokuEdits;
+        int nBacktracks;
+        int nBacktracksLastTree;
+        int runtime;
+    } stats;
+    set<int> finalAssignments;
+    
+    DavisPutnam                         (string, string, bool);
 };
 
 int main(int argc, char* argv[]) {
     string strategy, inputfile;
     int numberOfRuns;
+    vector<int> runtimes, backtracks;
     tie(strategy, inputfile, numberOfRuns) = parseArguments(argc, argv);
-//     printClauses(clauses);
-    DavisPutnam davisPutnam(strategy, inputfile, numberOfRuns);
+    bool saveFinalAssignments = numberOfRuns == 1;
+    for (int i = 0; i < numberOfRuns; i++) {
+        if (numberOfRuns > 1) inputfile = inputfile + to_string(i) + ".txt";
+        DavisPutnam davisPutnam(strategy, inputfile, saveFinalAssignments);
+        runtimes.push_back(davisPutnam.stats.runtime);
+        backtracks.push_back(davisPutnam.stats.nBacktracks);
+    }
+    float meanRuntime = vectorMean(runtimes);
+    double meanBacktracks = vectorMean(backtracks);
+    cout << "(Average) runtime: " << meanRuntime << " second(s)."<< endl;
+    cout << "(Average) number of backtracks: " << meanBacktracks << endl;
     return 0;
 }
 
-// Parse input arguments as strategy and inputfile
-tuple<string, string, int> parseArguments(int argc, char* argv[]) {
-    if (argc < 3) {
-        cout << "Usage: SAT <strategy> <inputfile>" << endl;
-        exit(1);
-    }
-    string strategy = argv[1];
-    string inputfile = argv[2];
-    int numberOfRuns;
-    if (argc == 4) {
-        numberOfRuns = atoi(argv[3]);
-    } else {
-        numberOfRuns = 1;
-    }
-    return make_tuple(strategy, inputfile, numberOfRuns);
-}
-
-
-// Reads and parses a DIMACS file from a given file location.
-// The DIMACS clauses are stored as a (formula) vector of clause
-// vectors.
-formula readDimacsFile(string loc) {
-    ifstream dimacsFile;
-    dimacsFile.open(loc);
-    
-    formula formula;
-    vector<vector<int> > clauses;
-    
-    string skip;
-    // Skip the first 4 strings in the first line
-    dimacsFile >> skip >> skip >> skip >> skip;
-    
-    int literal;
-    int prevLiteral = 0;
-    vector<int> *lastClause;
-    
-    while (dimacsFile >> literal) {
-        if (literal != 0) {
-            if (prevLiteral == 0) {
-                vector<int> clause = { literal };
-                formula.clauses.push_back(clause);
-                lastClause = &formula.clauses.back();
-            } else {
-                lastClause->push_back(literal);
-            }
-        }
-        prevLiteral = literal;
-    }
-    dimacsFile.close();
-    return formula;
-}
-
-// Prints a formula of clauses, where each clause is printed
-// on its individual line.
-void printClauses(vector<vector<int> > clauses) {
-    for (vector<int> const& clause: clauses) {
-        for (int const& literal: clause) {
-            cout << literal << " + ";
-        }
-        cout << endl;
-    }
-}
-
-float vectorMean(vector<int> v) {
-    return accumulate(v.begin(), v.end(), 0.0)/v.size();
-}
-
-DavisPutnam::DavisPutnam(string strategy, string inputFilePath, int numberOfRuns)
-: strategy(strategy), inputFilePath(inputFilePath) {
+/**
+ *
+ */
+DavisPutnam::DavisPutnam(string strategy, string inputFilePath, bool saveFinalAssignments)
+: strategy(strategy), inputFilePath(inputFilePath), saveFinalAssignments(saveFinalAssignments) {
+    // Initialize the recursive Davis Putnam algorithm with an empty set
+    // of assignments.
+    set<int> assignments;
     time_t tstart, tend;
-    vector<int> runTimes;
-    vector<int> backtracks;
-    for (int i = 0; i < numberOfRuns; i++) {
-        // Reset metrics
-        tstart = time(0);
-        backtrackCount = 0;
-        // Initialize the recursive Davis Putnam algorithm with an empty set
-        // of assignments.
-        set<int> assignments;
-        string inputFile;
-        if (numberOfRuns == 1) {
-            inputFile = inputFilePath;
-        } else {
-            // Assume the inputFilePath is a folder and the problems are .txt files
-            // with a number as name
-            inputFile = inputFilePath + to_string(i) + ".txt";
-        }
-        formula formula = readDimacsFile(inputFile);
-        if (strategy == "-S3") {
-            struct formula xSudokuRules = readDimacsFile("resources/x-sudoku-rules.txt");
-            formula.insert(xSudokuRules);
-        }
-        struct formula newFormula = formula;
-        newFormula = setup(newFormula);
-        set<int> finalAssignments = recursive(newFormula, assignments);
-        tend = time(0);
-        runTimes.push_back(difftime(tend, tstart));
-        backtracks.push_back(backtrackCount);
-        if (numberOfRuns == 1) {
-            printAssignments(finalAssignments);
-            string filename = saveOutput(finalAssignments);
-            cout << "Assignments written to file: " << filename << endl;
-        }
+    struct formula formula, newFormula;
+    // Reset metrics
+    tstart = time(0);
+    formula = readDimacsFile(inputFilePath);
+    if (strategy == "-S3") {
+        struct formula xSudokuRules = readDimacsFile("resources/x-sudoku-rules.txt");
+        formula.insert(xSudokuRules);
     }
-    float meanRunTime = vectorMean(runTimes);
-    double meanBacktracks = vectorMean(backtracks);
-    cout << "(Average) runtime: "<< meanRunTime <<" second(s)."<< endl;
-    cout << "(Average) number of backtracks: " << meanBacktracks << endl;
+    newFormula = setup(formula);
+    finalAssignments = recursive(newFormula, assignments);
+    tend = time(0);
+    stats.runtime = difftime(tend, tstart);
+    saveOutput();
 }
 
-// Perform essential steps before starting the recursive Davis Putnam algorithm,
-// such as removing tautologies from the initial Formula.
+/**
+ * Perform essential steps before starting the recursive Davis Putnam algorithm,
+ * such as removing tautologies from the initial Formula.
+ */
 formula DavisPutnam::setup(formula formula) {
     formula = removeTautologies(formula);
     return formula;
 }
 
-// Save outputs to file
-string DavisPutnam::saveOutput(set<int> assignments) {
+/**
+ * Save outputs to file.
+ */
+string DavisPutnam::saveOutput() {
+    if (!saveFinalAssignments) return NULL;
+    printAssignments(finalAssignments);
     string filename = inputFilePath + ".out";
     ofstream outputfile;
     outputfile.open(filename);
-    outputfile << "p cnf " << assignments.size() << " " << assignments.size() << endl;
-    for (int assignment : assignments) {
+    outputfile << "p cnf " << finalAssignments.size() << " " << finalAssignments.size() << endl;
+    for (int assignment : finalAssignments) {
         outputfile << assignment << " 0" << endl;
     }
     outputfile.close();
+    cout << "Assignments written to file: " << filename << endl;
     return filename;
 }
 
@@ -216,7 +157,7 @@ set<int> DavisPutnam::recursive(formula formula, set<int> assignments) {
     assignments.insert(literal);
     set<int> leftSplitAssignments = recursive(newFormula, assignments);
     if (!leftSplitAssignments.empty()) return leftSplitAssignments;
-    backtrackCount++;
+    stats.nBacktracks++;
     // If the TRUE value branching step did not yield a successfull assignment,
     // we try the FALSE value for the same variable.
     newFormula.pop_back();
@@ -242,8 +183,10 @@ tuple<formula, set<int> > DavisPutnam::pureLiterals(formula formula, set<int> as
     return make_tuple(new_formula, assignments);
 }
 
-// For each unit clause in the Formula, set the literal from that clause to TRUE,
-// and simplify the Formula.
+/**
+ * For each unit clause in the Formula, set the literal from that clause to TRUE,
+ * and simplify the Formula.
+ */
 tuple<formula, set<int> > DavisPutnam::unitPropagate(formula formula, set<int> assignments) {
     struct formula new_formula = formula;
     for (auto const& clause : formula.clauses) {
@@ -266,8 +209,10 @@ tuple<formula, set<int> > DavisPutnam::unitPropagate(formula formula, set<int> a
     return make_tuple(new_formula, assignments);
 }
 
-// Simplify the Formula by removing all clauses containing the `literal`
-// and by removing the literal from a clause where it is `-literal`.
+/**
+ * Simplify the Formula by removing all clauses containing the `literal`
+ * and by removing the literal from a clause where it is `-literal`.
+ */
 formula DavisPutnam::simplify(formula formula, int subjectLiteral) {
     struct formula new_formula = formula;
     int numberOfRemovedClauses = 0;
@@ -300,6 +245,9 @@ formula DavisPutnam::simplify(formula formula, int subjectLiteral) {
     return new_formula;
 }
 
+/**
+ *
+ */
 formula DavisPutnam::removeTautologies(formula formula) {
     vector<int> removeIndices;
     for (int i = 0; i < formula.clauses.size(); i++) {
@@ -324,12 +272,14 @@ formula DavisPutnam::removeItemsByIndices(formula formula, vector<int> removeInd
     return new_formula;
 }
 
-// Based on the set heuristic, pick the next (TRUE) literal to branch into.
-// Iterate through the current formula (clauses set), and find the first variable (TRUE literal)
-// that is not yet already included in our current set of variables.
+/**
+ * Based on the set heuristic, pick the next (TRUE) literal to branch into.
+ * Iterate through the current formula (clauses set), and find the first variable (TRUE literal)
+ * that is not yet already included in our current set of variables.
+ */
 int DavisPutnam::getNextLiteral(formula formula, set<int> currentVariables) {
     if (strategy == "-S1") {
-        int nextLiteral;
+        int nextLiteral = NULL;
         for (auto const& clause : formula.clauses) {
             for (int const& literal : clause) {
                 // Find whether the variable (positive value of the literal) already is included
@@ -406,4 +356,76 @@ void DavisPutnam::printAssignments(set<int> assignments) {
     }
     cout << endl;
     cout << endl << "Number of positive assignments: " << count << endl;
+}
+
+/**
+ * Parse input arguments as strategy and inputfile.
+ */
+tuple<string, string, int> parseArguments(int argc, char* argv[]) {
+    if (argc < 3) {
+        cout << "Usage: SAT <strategy> <inputfile>" << endl;
+        exit(1);
+    }
+    string strategy = argv[1];
+    string inputfile = argv[2];
+    int numberOfRuns;
+    if (argc == 4) {
+        numberOfRuns = atoi(argv[3]);
+    } else {
+        numberOfRuns = 1;
+    }
+    return make_tuple(strategy, inputfile, numberOfRuns);
+}
+
+/**
+ * Reads and parses a DIMACS file from a given file location.
+ * The DIMACS clauses are stored as a (formula) vector of clause
+ * vectors.
+ */
+formula readDimacsFile(string loc) {
+    ifstream dimacsFile;
+    dimacsFile.open(loc);
+    
+    formula formula;
+    vector<vector<int> > clauses;
+    
+    string skip;
+    // Skip the first 4 strings in the first line
+    dimacsFile >> skip >> skip >> skip >> skip;
+    
+    int literal;
+    int prevLiteral = 0;
+    vector<int> *lastClause;
+    
+    while (dimacsFile >> literal) {
+        if (literal != 0) {
+            if (prevLiteral == 0) {
+                vector<int> clause = { literal };
+                formula.clauses.push_back(clause);
+                lastClause = &formula.clauses.back();
+            } else {
+                lastClause->push_back(literal);
+            }
+        }
+        prevLiteral = literal;
+    }
+    dimacsFile.close();
+    return formula;
+}
+
+/**
+ * Prints a formula of clauses, where each clause is printed
+ * on its individual line.
+ */
+void printClauses(vector<vector<int> > clauses) {
+    for (vector<int> const& clause: clauses) {
+        for (int const& literal: clause) {
+            cout << literal << " + ";
+        }
+        cout << endl;
+    }
+}
+
+float vectorMean(vector<int> v) {
+    return accumulate(v.begin(), v.end(), 0.0)/v.size();
 }
