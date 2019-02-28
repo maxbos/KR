@@ -57,6 +57,8 @@ class DavisPutnam {
     
 public:
     struct metrics {
+        metrics() : nUnsatisfiable(0), nRootVisits(0), nSudokuEdits(0),
+        nBacktracks(0), nBacktracksLastTree(0) {};
         int nUnsatisfiable;
         int nRootVisits;
         int nSudokuEdits;
@@ -115,7 +117,9 @@ DavisPutnam::DavisPutnam(string strategy, string inputFilePath, bool saveFinalAs
         formula.insert(xSudokuRules);
     }
     newFormula = setup(formula);
-    finalAssignments = recursive(newFormula, assignments);
+    do {
+        finalAssignments = recursive(newFormula, assignments);
+    } while (finalAssignments.empty() && stats.nUnsatisfiable++);
     tend = time(0);
     stats.runtime = difftime(tend, tstart);
     saveOutput();
@@ -157,7 +161,7 @@ set<int> DavisPutnam::recursive(formula formula, set<int> assignments) {
     tie(newFormula, assignments) = pureLiterals(newFormula, assignments);
     tie(newFormula, assignments) = unitPropagate(newFormula, assignments);
     // When the set of clauses contains an empty clause, the problem is unsatisfiable.
-    if (containsEmptyClause(newFormula)) { stats.nUnsatisfiable++; return {}; };
+    if (containsEmptyClause(newFormula)) return {};
     // We have found a successfull assignment when we have no clauses left.
     if (newFormula.clauses.empty()) return assignments;
     // We perform the branching step by picking a literal that is not yet included

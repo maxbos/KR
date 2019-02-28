@@ -68,6 +68,10 @@
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
+            argument = "-S3"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
             argument = "resources/1000-sudokus/1000.txt"
             isEnabled = "NO">
          </CommandLineArgument>
