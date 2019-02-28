@@ -27,6 +27,7 @@ struct formula {
     void insert(formula f2) {
         clauses.insert(clauses.end(), f2.clauses.begin(), f2.clauses.end());
     };
+    operator bool() { return true; }
 };
 
 formula readDimacsFile                      (string);
@@ -40,20 +41,21 @@ class DavisPutnam {
     bool saveFinalAssignments;
     int lefVariable;
     int backtrackCount = 0;
-    formula setup                                          (formula);
-    string saveOutput                                      ();
-    set<int> recursive                                     (formula, set<int>);
-    tuple<formula, set<int> > pureLiterals                 (formula, set<int>);
-    tuple<formula, set<int> > unitPropagate                (formula, set<int>);
-    formula simplify                                       (formula, int);
-    formula removeTautologies                              (formula);
-    formula removeItemsByIndices                           (formula, vector<int>);
-    int getNextLiteral                                     (formula, set<int>);
-    int getNextRandomLiteral                               (formula, set<int>);
-    set<int> getLiterals                                   (formula);
-    set<int> getVariables                                  (set<int>);
-    bool containsEmptyClause                               (formula);
+    formula setup                                           (formula);
+    string saveOutput                                       ();
+    set<int> recursive                                      (formula, set<int>);
+    tuple<formula, set<int> > pureLiterals                  (formula, set<int>);
+    tuple<formula, set<int> > unitPropagate                 (formula, set<int>);
+    formula simplify                                        (formula, int);
+    formula removeTautologies                               (formula);
+    formula removeItemsByIndices                            (formula, vector<int>);
+    int getNextLiteral                                      (formula, set<int>);
+    int getNextRandomLiteral                                (formula, set<int>);
+    set<int> getLiterals                                    (formula);
+    set<int> getVariables                                   (set<int>);
+    bool containsEmptyClause                                (formula);
     void printAssignments                                   (set<int>);
+    formula attemptFormulaFix                               (formula);
     
 public:
     struct metrics {
@@ -119,10 +121,20 @@ DavisPutnam::DavisPutnam(string strategy, string inputFilePath, bool saveFinalAs
     newFormula = setup(formula);
     do {
         finalAssignments = recursive(newFormula, assignments);
-    } while (finalAssignments.empty() && stats.nUnsatisfiable++);
+    } while (finalAssignments.empty() && ++stats.nUnsatisfiable &&
+             !!(newFormula = attemptFormulaFix(newFormula)));
     tend = time(0);
     stats.runtime = difftime(tend, tstart);
     saveOutput();
+}
+
+/**
+ * Changes the given formula to containing rules that will hopefully create a satisfiable
+ * formula.
+ */
+formula DavisPutnam::attemptFormulaFix(formula formula) {
+    cout << "trying to fix the formula" << endl;
+    return formula;
 }
 
 /**
