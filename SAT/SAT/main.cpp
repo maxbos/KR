@@ -181,8 +181,8 @@ formula DavisPutnam::randomShuffle(formula formula) {
         auto const& clause = formula.clauses.at(i);
         // We have found a position assignment. Delete this assignment with a probability
         // of 0.5.
-        int const random = (rand() % (4 + 1 - 1)) + 1;
-        if (clause.size() == 1 && random == 2) {
+        int const random = (rand() % (8 + 1 - 1)) + 1;
+        if (clause.size() == 1 && random == 1) {
             string const literal = to_string(clause.at(0));
 //            char const& ypos = literal.at(0);
 //            char const& xpos = literal.at(1);
@@ -196,10 +196,10 @@ formula DavisPutnam::randomShuffle(formula formula) {
             cout << "was: " << literal << " , now is: " << newLiteral << endl;
             newFormula.clauses[i] = { newLiteral };
 //            }
-            goto end;
+//            goto end;
         }
     }
-    end:
+//    end:
 //    cout << "Removed " << nRemovedClauses << " assignments" << endl;
     return newFormula;
 }
