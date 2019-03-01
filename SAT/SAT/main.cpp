@@ -135,10 +135,10 @@ DavisPutnam::DavisPutnam(string strategy, string inputFilePath, bool saveFinalAs
         formula.insert(xSudokuRules);
     }
     newFormula = setup(formula);
-    do {
-        finalAssignments = recursive(newFormula, assignments);
-    } while (finalAssignments.empty() && ++stats.nUnsatisfiable &&
-             !!(newFormula = attemptFormulaFix(newFormula)));
+   do {
+        finalAssignments = recursive(newFormula, assignments);    
+   } while (finalAssignments.empty() && ++stats.nUnsatisfiable &&
+            !!(newFormula = attemptFormulaFix(newFormula)));
     tend = time(0);
     stats.runtime = difftime(tend, tstart);
     
@@ -246,7 +246,6 @@ set<int> DavisPutnam::recursive(formula formula, set<int> assignments) {
     // We perform the branching step by picking a literal that is not yet included
     // in our partial assignment.
     int literal = getNextLiteral(newFormula, getVariables(assignments));
-    if (literal == 0) return {};
     // Split into the TRUE value for the new variable.
     newFormula.push_back({ literal });
     assignments.insert(literal);
@@ -393,12 +392,14 @@ int DavisPutnam::getNextLiteral(formula formula, set<int> currentVariables) {
         }
     end:
         return nextLiteral;
-    } else if (strategy == "-S2") {
+    } else if (strategy == "-S2" || strategy == "-S3") {
         if (currentVariables.find(abs(lefVariable)) == currentVariables.end()) {
             return lefVariable;
         } else {
             return getNextRandomLiteral(formula, currentVariables);
         }
+    } else {
+        throw "This strategy has no implementation of getNextLiteral()";
     }
     // No valid strategy specified
     return 0;
