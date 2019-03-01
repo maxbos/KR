@@ -17,6 +17,7 @@
 #include <set>
 #include <ctime>
 #include <numeric>
+#include <tuple>
 
 using namespace std;
 
@@ -94,6 +95,7 @@ int main(int argc, char* argv[]) {
         } else {
             inputfilePath = inputfile + to_string(i) + ".txt";
         }
+        cout << "Current problem: " << inputfilePath << endl;
         DavisPutnam davisPutnam(strategy, inputfilePath, saveFinalAssignments);
         runtimes.push_back(davisPutnam.stats.runtime);
         backtracks.push_back(davisPutnam.stats.nBacktracks);
