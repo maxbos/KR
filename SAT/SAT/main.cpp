@@ -19,6 +19,7 @@
 #include <numeric>
 #include <map>
 #include <cmath>
+#include <tuple>
 
 using namespace std;
 
@@ -87,12 +88,14 @@ class DavisPutnam {
 public:
     struct metrics {
         metrics() : nUnsatisfiable(0), nRootVisits(0), nSudokuEdits(0),
-        nBacktracks(0), nBacktracksLastTree(0), uniquelySatisfiable(false)  {};
+        nBacktracks(0), nBacktracksLastTree(0), nRandomNumbers(0),
+        uniquelySatisfiable(false)  {};
         int nUnsatisfiable;
         int nRootVisits;
         int nSudokuEdits;
         int nBacktracks;
         int nBacktracksLastTree;
+        int nRandomNumbers;
         int runtime;
         bool uniquelySatisfiable;
         int ymax;
@@ -109,7 +112,7 @@ public:
 int main(int argc, char* argv[]) {
     string strategy, inputfile;
     int numberOfRuns;
-    vector<int> runtimes, backtracks, backtracksLastTree, rootVisits, unsatisfiables, uniquelySatisfiables;
+    vector<int> runtimes, backtracks, backtracksLastTree, rootVisits, unsatisfiables, uniquelySatisfiables, randomNumberGenerations;
     tie(strategy, inputfile, numberOfRuns) = parseArguments(argc, argv);
     bool saveFinalAssignments = numberOfRuns == 1;
     for (int i = 0; i < numberOfRuns; i++) {
@@ -119,12 +122,14 @@ int main(int argc, char* argv[]) {
         } else {
             inputfilePath = inputfile + to_string(i) + ".txt";
         }
+        cout << "Current problem: " << inputfilePath << endl;
         DavisPutnam davisPutnam(strategy, inputfilePath, saveFinalAssignments);
         runtimes.push_back(davisPutnam.stats.runtime);
         backtracks.push_back(davisPutnam.stats.nBacktracks);
         backtracksLastTree.push_back(davisPutnam.stats.nBacktracksLastTree);
         rootVisits.push_back(davisPutnam.stats.nRootVisits);
         unsatisfiables.push_back(davisPutnam.stats.nUnsatisfiable);
+        randomNumberGenerations.push_back(davisPutnam.stats.nRandomNumbers);
         uniquelySatisfiables.push_back(davisPutnam.stats.uniquelySatisfiable);
     }
     float meanRuntime = vectorMean(runtimes);
@@ -132,6 +137,7 @@ int main(int argc, char* argv[]) {
     double meanBacktracksLastTree = vectorMean(backtracksLastTree);
     double meanRootVisits = vectorMean(rootVisits);
     double meanUnsatisfiables = vectorMean(unsatisfiables);
+    double meanRandomNumbers = vectorMean(randomNumberGenerations);
     int totalUniquelySatisfiable = vectorSum(uniquelySatisfiables);
     
     cout << "Number of problems (solved or unsolved): " << numberOfRuns << endl;
@@ -140,7 +146,9 @@ int main(int argc, char* argv[]) {
     cout << "(Average) number of backtracks in last tree: " << meanBacktracksLastTree << endl;
     cout << "(Average) number of root visits: " << meanRootVisits << endl;
     cout << "(Average) number of unsatisfiables: " << meanUnsatisfiables << endl;
+    cout << "(Average) number of random number generations: " << meanRandomNumbers << endl;
     cout << "Number of problems that are uniquely satisfiable: " << totalUniquelySatisfiable << endl;
+    cout << "Sanity check: " << vectorSum(randomNumberGenerations) << endl;
     return 0;
 }
 
@@ -482,24 +490,7 @@ formula DavisPutnam::removeItemsByIndices(formula formula, vector<int> removeInd
  */
 int DavisPutnam::getNextLiteral(formula formula, set<int> currentVariables) {
     if (strategy == "-S1") {
-        int nextLiteral = 0;
-        for (auto const& clause : formula.clauses) {
-            for (int const& literal : clause) {
-                // Find whether the variable (positive value of the literal) already is included
-                // in the current set of variables.
-                const bool literalIsAlreadyAssigned = find(
-                                                           currentVariables.begin(), currentVariables.end(), abs(literal)
-                                                           ) != currentVariables.end();
-                
-                if (!literalIsAlreadyAssigned) {
-                    nextLiteral = abs(literal);
-                    // Jump out of the nested for loops and return the next literal.
-                    goto end;
-                }
-            }
-        }
-    end:
-        return nextLiteral;
+        return getNextRandomLiteral(formula, currentVariables);
     } else if (strategy == "-S2" || strategy == "-S3") {
         if (currentVariables.find(abs(lefVariable)) == currentVariables.end()) {
             return lefVariable;
@@ -521,6 +512,7 @@ int DavisPutnam::getNextRandomLiteral(formula formula, set<int> currentVariables
         int rand_idx = rand() % literals.size();
         advance(it, rand_idx);
         next_literal = *it;
+        ++stats.nRandomNumbers;
     } while(find(currentVariables.begin(), currentVariables.end(), abs(next_literal)) != currentVariables.end());
     return next_literal;
 }
