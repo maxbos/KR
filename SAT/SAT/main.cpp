@@ -17,6 +17,8 @@
 #include <set>
 #include <ctime>
 #include <numeric>
+#include <map>
+#include <cmath>
 
 using namespace std;
 
@@ -28,6 +30,24 @@ struct formula {
         clauses.insert(clauses.end(), f2.clauses.begin(), f2.clauses.end());
     };
     operator bool() { return true; }
+    vector<vector<int> >::iterator findAssignment(int literal) {
+        return find_if(clauses.begin(), clauses.end(), [&literal](auto const& clause) {
+            return clause.size() == 1 && clause.at(0) == literal;
+        });
+    };
+    void swapUnitClause(int literal, int newLiteral, int affectedLiteral, int newAffectedLiteral) {
+        if (literal != 0) {
+            // Find the index of the unit clause for the given `literal`.
+            vector<vector<int> >::iterator it_literal = findAssignment(literal);
+            // Change the literals.
+            clauses[it_literal - clauses.begin()] = {newLiteral};
+        }
+        if (affectedLiteral != 0) {
+            // Find the index of the unit clause for the given `affectedLiteral`.
+            vector<vector<int> >::iterator it_affLiteral = findAssignment(affectedLiteral);
+            clauses[it_affLiteral - clauses.begin()] = {newAffectedLiteral};
+        }
+    };
 };
 
 formula readDimacsFile                      (string);
@@ -44,6 +64,7 @@ class DavisPutnam {
     int backtrackCount = 0;
     formula setup                                           (formula);
     string saveOutput                                       ();
+    set<int> solve                                          (formula);
     set<int> recursive                                      (formula, set<int>);
     tuple<formula, set<int> > pureLiterals                  (formula, set<int>);
     tuple<formula, set<int> > unitPropagate                 (formula, set<int>);
@@ -57,7 +78,11 @@ class DavisPutnam {
     bool containsEmptyClause                                (formula);
     void printAssignments                                   (set<int>);
     formula attemptFormulaFix                               (formula);
-    formula randomShuffle                                (formula);
+    formula randomShuffle                                   (formula);
+    tuple<int, int, int> swapAssignmentInBlock              (string, int, vector<int>);
+    
+    map<int, vector<int> > getAssignmentsInBlocks           (formula);
+    int getBlockIndex                                       (string);
     
 public:
     struct metrics {
@@ -70,11 +95,13 @@ public:
         int nBacktracksLastTree;
         int runtime;
         bool uniquelySatisfiable;
+        int ymax;
+        int blockSize;
     } stats;
     set<int> finalAssignments;
     set<int> lastAssignments;
-    set<int> prevAssignments;
-    formula prevFormula;
+    set<int> bestAssignments;
+    formula bestFormula;
     
     DavisPutnam                         (string, string, bool);
 };
@@ -122,12 +149,11 @@ int main(int argc, char* argv[]) {
  */
 DavisPutnam::DavisPutnam(string strategy, string inputFilePath, bool saveFinalAssignments)
 : strategy(strategy), inputFilePath(inputFilePath), saveFinalAssignments(saveFinalAssignments) {
-    // Initialize the recursive Davis Putnam algorithm with an empty set
-    // of assignments.
     set<int> assignments;
     time_t tstart, tend;
     struct formula formula, newFormula;
-    // Reset metrics
+    vector<int> clause;
+    
     tstart = time(0);
     formula = readDimacsFile(inputFilePath);
     if (strategy == "-S3") {
@@ -135,14 +161,11 @@ DavisPutnam::DavisPutnam(string strategy, string inputFilePath, bool saveFinalAs
         formula.insert(xSudokuRules);
     }
     newFormula = setup(formula);
-   do {
-        finalAssignments = recursive(newFormula, assignments);    
-   } while (finalAssignments.empty() && ++stats.nUnsatisfiable &&
-            !!(newFormula = attemptFormulaFix(newFormula)));
+    finalAssignments = solve(newFormula);
+    
     tend = time(0);
     stats.runtime = difftime(tend, tstart);
-    
-    vector<int> clause;
+
     for (auto assignment : finalAssignments) {
         if (assignment > 0) clause.push_back(-assignment);
     }
@@ -154,6 +177,19 @@ DavisPutnam::DavisPutnam(string strategy, string inputFilePath, bool saveFinalAs
 }
 
 /**
+ *
+ */
+set<int> DavisPutnam::solve(formula formula) {
+    set<int> assignments;
+    set<int> _finalAssignments = recursive(formula, assignments);
+    cout << "final assignments size: " << finalAssignments.size() << endl;
+    if (!_finalAssignments.empty()) return _finalAssignments;
+    stats.nUnsatisfiable++;
+    formula = attemptFormulaFix(formula);
+    return solve(formula);
+}
+
+/**
  * Changes the given formula to containing rules that will hopefully create a satisfiable
  * formula.
  */
@@ -161,47 +197,115 @@ formula DavisPutnam::attemptFormulaFix(formula formula) {
     cout << "trying to fix the formula" << endl;
     // If the current formula performed better, we want to keep the current
     // formula. If the prev formula performed better, we want to reset it.
-    cout << "prev: " << prevAssignments.size() << ", last: " << lastAssignments.size() << endl;
-    if (prevAssignments.size() > lastAssignments.size()) {
-        formula = prevFormula;
+    cout << "prev: " << bestAssignments.size() << ", last: " << lastAssignments.size() << endl;
+    if (lastAssignments.size() > bestAssignments.size()) {
+        bestAssignments = lastAssignments;
+        bestFormula = formula;
+    } else {
+        formula = bestFormula;
     }
-    prevFormula = formula;
-    prevAssignments = lastAssignments;
     formula = randomShuffle(formula);
+    cout << "changed formula" << endl;
     return formula;
 }
 
 /**
- * Erases assignments from the given formula for a given probability.
+ * Swaps assignments within sudoku blocks.
+ *
+ * Heuristics:
+ * -> for choosing within how many blocks literals to swap
+ * -> for choosing which literal(s) to swap
+ * -> for how many blocks, how many literals to swap?
  */
 formula DavisPutnam::randomShuffle(formula formula) {
-//    int nRemovedClauses = 0;
     struct formula newFormula = formula;
-    for (int i = 0; i < formula.clauses.size(); i++) {
-        auto const& clause = formula.clauses.at(i);
-        // We have found a position assignment. Delete this assignment with a probability
-        // of 0.5.
-        int const random = (rand() % (8 + 1 - 1)) + 1;
-        if (clause.size() == 1 && random == 1) {
-            string const literal = to_string(clause.at(0));
-//            char const& ypos = literal.at(0);
-//            char const& xpos = literal.at(1);
-            char const& val = literal.at(2);
-            // if diagonal change val/pos
-//            if (ypos == xpos) {
-            int const randomx = (rand() % (9 + 1 - 1)) + 1;
-            int const randomy = (rand() % (9 + 1 - 1)) + 1;
-//                int const randomv = (rand() % (9 + 1 - 1)) + 1;
-            int newLiteral = stoi(to_string(randomy) + to_string(randomx) + val);
-            cout << "was: " << literal << " , now is: " << newLiteral << endl;
-            newFormula.clauses[i] = { newLiteral };
-//            }
-//            goto end;
+    map<int, vector<int> > blocks = getAssignmentsInBlocks(formula);
+    for (auto const& block : blocks) {
+        int const randnum = (rand() % (9 + 1 - 1)) + 1;
+        if (randnum < 4) continue;
+        int const& blockIdx = block.first;
+        auto const& blockAssignments = block.second;
+        // Within this block we swap neighboring literals.
+        // First, randomly pick one literal from our set of assignments.
+        int const randidx = (rand() % blockAssignments.size());
+        int const literal = blockAssignments.at(randidx);
+        // Second, change the position of this literal 1 step left,
+        // right, bottom, up, within its own block.
+        // Last, if the new position was already occupied, change the old
+        // occupant to the previous position from our changed literal.
+        int newLiteral, affectedLiteral, newAffectedLiteral;
+        tie(newLiteral, affectedLiteral, newAffectedLiteral) = swapAssignmentInBlock(to_string(literal), blockIdx, blockAssignments);
+        newFormula.swapUnitClause(literal, newLiteral, affectedLiteral, newAffectedLiteral);
+    }
+    return newFormula;
+}
+
+/**
+ *
+ */
+tuple<int, int, int> DavisPutnam::swapAssignmentInBlock(string literal, int blockIdx, vector<int> blockAssignments) {
+    string newLiteral;
+    char newY, newX;
+    vector<int> const& poss = {-1, 0, 1};
+    char y = literal.at(0);
+    char x = literal.at(1);
+    char v = literal.at(2);
+    do {
+        newLiteral = "";
+        // Calculate new position for literal.
+        newY = y + poss.at(rand() % 3);
+        newX = x + poss.at(rand() % 3);
+//        newLiteral = to_string(newY) + to_string(newX) + to_string(v);
+        newLiteral += newY;
+        newLiteral += newX;
+        newLiteral += v;
+    // Try again if the new literal is not in the same block as previous literal.
+    } while (getBlockIndex(newLiteral) != blockIdx);
+    // Find a possibly affected literal at position (newY, newX).
+    vector<int>::iterator it = find_if(blockAssignments.begin(), blockAssignments.end(), [newY, newX](int const& ass) {
+        return to_string(ass).at(0) == newY && to_string(ass).at(1) == newX;
+    });
+    string newAffectedLiteral;
+    int newAffectedLiteralInt = 0;
+    if (it != blockAssignments.end()) {
+        newAffectedLiteral = "";
+        newAffectedLiteral += y;
+        newAffectedLiteral += x;
+        newAffectedLiteral += to_string(*it).at(2);
+        newAffectedLiteralInt = stoi(newAffectedLiteral);
+    }
+    int affectedLiteral = 0;
+    if (it != blockAssignments.end()) affectedLiteral = *it;
+    return make_tuple(stoi(newLiteral), affectedLiteral, newAffectedLiteralInt);
+}
+
+/**
+ * For each unit clause in the formula, we assume it to be a literal assignment.
+ * Add this literal assignment to its own sudoku block.
+ */
+map<int, vector<int> > DavisPutnam::getAssignmentsInBlocks(formula formula) {
+    map<int, vector<int> > blocks;
+    for (auto const& clause : formula.clauses) {
+        if (clause.size() == 1) {
+            int const literal = clause.at(0);
+            int const idx = getBlockIndex(to_string(literal));
+            blocks[idx].push_back(literal);
         }
     }
-//    end:
-//    cout << "Removed " << nRemovedClauses << " assignments" << endl;
-    return newFormula;
+    return blocks;
+}
+
+/**
+ * Returns the index of the block within the sudoku in which the given
+ * literal assignment exists.
+ */
+int DavisPutnam::getBlockIndex(string literal) {
+    double const y = (double) literal.at(0) - '0';
+    double const x = (double) literal.at(1) - '0';
+    int blocksPerRow = stats.ymax/stats.blockSize;
+    int rows = ceil((double)y/(double)stats.blockSize) - 1;
+    int idx = rows * blocksPerRow + ceil((double)x/(double)stats.blockSize);
+    return idx;
 }
 
 /**
@@ -210,6 +314,8 @@ formula DavisPutnam::randomShuffle(formula formula) {
  */
 formula DavisPutnam::setup(formula formula) {
     formula = removeTautologies(formula);
+    stats.ymax = to_string(*getLiterals(formula).rbegin()).at(0) - '0';
+    stats.blockSize = sqrt(stats.ymax);
     return formula;
 }
 
@@ -246,6 +352,8 @@ set<int> DavisPutnam::recursive(formula formula, set<int> assignments) {
     // We perform the branching step by picking a literal that is not yet included
     // in our partial assignment.
     int literal = getNextLiteral(newFormula, getVariables(assignments));
+    cout << "next literal: " << literal << endl;
+    if (literal == 0) return {};
     // Split into the TRUE value for the new variable.
     newFormula.push_back({ literal });
     assignments.insert(literal);
@@ -293,7 +401,7 @@ tuple<formula, set<int> > DavisPutnam::unitPropagate(formula formula, set<int> a
             assignments.insert(literal);
         }
     }
-    if (strategy == "-S2" && !new_formula.clauses.empty()) {
+    if ((strategy == "-S2" || strategy == "-S3") && !new_formula.clauses.empty()) {
         for (auto it = new_formula.clauses.rbegin(); it != new_formula.clauses.rend(); ++it) {
             if ((*it).empty()) continue;
             if ((*it).back() == lefVariable) continue;
@@ -374,7 +482,7 @@ formula DavisPutnam::removeItemsByIndices(formula formula, vector<int> removeInd
  */
 int DavisPutnam::getNextLiteral(formula formula, set<int> currentVariables) {
     if (strategy == "-S1") {
-        int nextLiteral = NULL;
+        int nextLiteral = 0;
         for (auto const& clause : formula.clauses) {
             for (int const& literal : clause) {
                 // Find whether the variable (positive value of the literal) already is included
