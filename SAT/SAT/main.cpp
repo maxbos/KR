@@ -34,6 +34,7 @@ formula readDimacsFile                      (string);
 void printClauses                           (vector<vector<int> >);
 tuple<string, string, int> parseArguments   (int, char*[]);
 float vectorMean                            (vector<int>);
+int vectorSum                               (vector<int>);
 
 class DavisPutnam {
     string strategy;
@@ -61,13 +62,14 @@ class DavisPutnam {
 public:
     struct metrics {
         metrics() : nUnsatisfiable(0), nRootVisits(0), nSudokuEdits(0),
-        nBacktracks(0), nBacktracksLastTree(0) {};
+        nBacktracks(0), nBacktracksLastTree(0), uniquelySatisfiable(false)  {};
         int nUnsatisfiable;
         int nRootVisits;
         int nSudokuEdits;
         int nBacktracks;
         int nBacktracksLastTree;
         int runtime;
+        bool uniquelySatisfiable;
     } stats;
     set<int> finalAssignments;
     
@@ -77,28 +79,39 @@ public:
 int main(int argc, char* argv[]) {
     string strategy, inputfile;
     int numberOfRuns;
-    vector<int> runtimes, backtracks, backtracksLastTree, rootVisits, unsatisfiables;
+    vector<int> runtimes, backtracks, backtracksLastTree, rootVisits, unsatisfiables, uniquelySatisfiables;
     tie(strategy, inputfile, numberOfRuns) = parseArguments(argc, argv);
     bool saveFinalAssignments = numberOfRuns == 1;
     for (int i = 0; i < numberOfRuns; i++) {
-        if (numberOfRuns > 1) inputfile = inputfile + to_string(i) + ".txt";
-        DavisPutnam davisPutnam(strategy, inputfile, saveFinalAssignments);
+        string inputfilePath;
+        if (numberOfRuns == 1) {
+            inputfilePath = inputfile;
+        } else {
+            inputfilePath = inputfile + to_string(i) + ".txt";
+        }
+        cout << "\n\n\n" << inputfilePath << "\n\n\n";
+        DavisPutnam davisPutnam(strategy, inputfilePath, saveFinalAssignments);
         runtimes.push_back(davisPutnam.stats.runtime);
         backtracks.push_back(davisPutnam.stats.nBacktracks);
         backtracksLastTree.push_back(davisPutnam.stats.nBacktracksLastTree);
         rootVisits.push_back(davisPutnam.stats.nRootVisits);
         unsatisfiables.push_back(davisPutnam.stats.nUnsatisfiable);
+        uniquelySatisfiables.push_back(davisPutnam.stats.uniquelySatisfiable);
     }
     float meanRuntime = vectorMean(runtimes);
     double meanBacktracks = vectorMean(backtracks);
     double meanBacktracksLastTree = vectorMean(backtracksLastTree);
     double meanRootVisits = vectorMean(rootVisits);
     double meanUnsatisfiables = vectorMean(unsatisfiables);
+    int totalUniquelySatisfiable = vectorSum(uniquelySatisfiables);
+    
+    cout << "Number of problems (solved or unsolved): " << numberOfRuns << endl;
     cout << "(Average) runtime: " << meanRuntime << " second(s)."<< endl;
     cout << "(Average) number of backtracks: " << meanBacktracks << endl;
     cout << "(Average) number of backtracks in last tree: " << meanBacktracksLastTree << endl;
     cout << "(Average) number of root visits: " << meanRootVisits << endl;
     cout << "(Average) number of unsatisfiables: " << meanUnsatisfiables << endl;
+    cout << "Number of problems that are uniquely satisfiable: " << totalUniquelySatisfiable << endl;
     return 0;
 }
 
@@ -126,6 +139,15 @@ DavisPutnam::DavisPutnam(string strategy, string inputFilePath, bool saveFinalAs
              !!(newFormula = attemptFormulaFix(newFormula)));
     tend = time(0);
     stats.runtime = difftime(tend, tstart);
+    
+    vector<int> clause;
+    for (auto assignment : finalAssignments) {
+        if (assignment > 0) clause.push_back(-assignment);
+    }
+    newFormula.clauses.push_back(clause);
+    set<int> newAssignments = recursive(newFormula, assignments);
+    stats.uniquelySatisfiable = newAssignments.empty();
+    
     saveOutput();
 }
 
@@ -175,7 +197,7 @@ formula DavisPutnam::setup(formula formula) {
  * Save outputs to file.
  */
 string DavisPutnam::saveOutput() {
-    if (!saveFinalAssignments) return NULL;
+    if (!saveFinalAssignments) return "";
     printAssignments(finalAssignments);
     string filename = inputFilePath + ".out";
     ofstream outputfile;
@@ -482,3 +504,8 @@ void printClauses(vector<vector<int> > clauses) {
 float vectorMean(vector<int> v) {
     return accumulate(v.begin(), v.end(), 0.0)/v.size();
 }
+
+int vectorSum(vector<int> v) {
+    return accumulate(v.begin(), v.end(), 0);
+}
+
