@@ -89,7 +89,6 @@ int main(int argc, char* argv[]) {
         } else {
             inputfilePath = inputfile + to_string(i) + ".txt";
         }
-        cout << "\n\n\n" << inputfilePath << "\n\n\n";
         DavisPutnam davisPutnam(strategy, inputfilePath, saveFinalAssignments);
         runtimes.push_back(davisPutnam.stats.runtime);
         backtracks.push_back(davisPutnam.stats.nBacktracks);
