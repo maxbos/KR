@@ -56,6 +56,7 @@ void printClauses                           (vector<vector<int> >);
 tuple<string, string, int> parseArguments   (int, char*[]);
 float vectorMean                            (vector<int>);
 int vectorSum                               (vector<int>);
+int char2int                                (char);
 
 class DavisPutnam {
     string strategy;
@@ -80,10 +81,12 @@ class DavisPutnam {
     void printAssignments                                   (set<int>);
     formula attemptFormulaFix                               (formula);
     formula randomShuffle                                   (formula);
+    formula smartShuffle                                    (formula);
     tuple<int, int, int> swapAssignmentInBlock              (string, int, vector<int>);
     
     map<int, vector<int> > getAssignmentsInBlocks           (formula);
     int getBlockIndex                                       (string);
+    int getDiagonalConflict                                 (int, set<int>);
     
 public:
     struct metrics {
@@ -164,7 +167,7 @@ DavisPutnam::DavisPutnam(string strategy, string inputFilePath, bool saveFinalAs
     
     tstart = time(0);
     formula = readDimacsFile(inputFilePath);
-    if (strategy == "-S3") {
+    if (strategy == "-S3" || strategy == "-S4") {
         struct formula xSudokuRules = readDimacsFile("resources/x-sudoku-rules.txt");
         formula.insert(xSudokuRules);
     }
@@ -174,12 +177,12 @@ DavisPutnam::DavisPutnam(string strategy, string inputFilePath, bool saveFinalAs
     tend = time(0);
     stats.runtime = difftime(tend, tstart);
 
-    for (auto assignment : finalAssignments) {
-        if (assignment > 0) clause.push_back(-assignment);
-    }
-    newFormula.clauses.push_back(clause);
-    set<int> newAssignments = recursive(newFormula, assignments);
-    stats.uniquelySatisfiable = newAssignments.empty();
+//    for (auto assignment : finalAssignments) {
+//        if (assignment > 0) clause.push_back(-assignment);
+//    }
+//    newFormula.clauses.push_back(clause);
+//    set<int> newAssignments = recursive(newFormula, assignments);
+//    stats.uniquelySatisfiable = newAssignments.empty();
     
     saveOutput();
 }
@@ -191,7 +194,7 @@ set<int> DavisPutnam::solve(formula formula) {
     set<int> assignments;
     set<int> _finalAssignments = recursive(formula, assignments);
     cout << "final assignments size: " << finalAssignments.size() << endl;
-    if (!_finalAssignments.empty()) return _finalAssignments;
+    if (!_finalAssignments.empty() || strategy == "-S1" || strategy == "-S2") return _finalAssignments;
     stats.nUnsatisfiable++;
     formula = attemptFormulaFix(formula);
     return solve(formula);
@@ -212,9 +215,62 @@ formula DavisPutnam::attemptFormulaFix(formula formula) {
     } else {
         formula = bestFormula;
     }
+    formula = smartShuffle(formula);
     formula = randomShuffle(formula);
     cout << "changed formula" << endl;
     return formula;
+}
+
+
+formula DavisPutnam::smartShuffle(formula formula) {
+    struct formula newFormula = formula;
+    set<int> literals = getLiterals(formula);
+    for (auto const& literal : literals) {
+        int conflict = getDiagonalConflict(literal, literals);
+        if (conflict) {
+            
+            
+            // Only fix one conflict at the time
+            return newFormula;
+        }
+        
+    }
+    return formula;
+}
+
+/**
+ * Checks if there are any conflicts on the diagonals
+ * Returns the first conflicting literal, if any
+ */
+int DavisPutnam::getDiagonalConflict(int lit, set<int> literals) {
+    string literal = to_string(lit);
+    char y = literal.at(0);
+    char x = literal.at(1);
+    char v = literal.at(2);
+    if (char2int(x) + char2int(y) == stats.ymax + 1) {
+        // Literal is on the bottom-left <-> top-right diagonal
+        for (int n = 1; n <= stats.ymax; n++) {
+            if (n == char2int(x)) continue;
+            int check = stoi(to_string(n) + to_string(stats.ymax+1-n) + to_string(v));
+            if (find(literals.begin(), literals.end(), check) != literals.end()) {
+                // Conflict found
+                return check;
+            }
+         }
+    }
+    if (char2int(x) == char2int(y)) {
+        // Literal is on the top-left <-> bottom-right diagonal
+        for (int n = 1; n <= stats.ymax; n++) {
+            if (n == char2int(x)) continue;
+            int check = stoi(to_string(n) + to_string(n) + to_string(v));
+            if (find(literals.begin(), literals.end(), check) != literals.end()) {
+                // Conflict found
+                return check;
+            }
+        }
+    }
+    // Literal is not on the diagonal or no conflict found
+    return 0;
 }
 
 /**
@@ -629,5 +685,9 @@ float vectorMean(vector<int> v) {
 
 int vectorSum(vector<int> v) {
     return accumulate(v.begin(), v.end(), 0);
+}
+
+int char2int(char n) {
+    return n - '0';
 }
 
