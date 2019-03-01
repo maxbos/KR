@@ -56,7 +56,7 @@ class DavisPutnam {
     bool containsEmptyClause                                (formula);
     void printAssignments                                   (set<int>);
     formula attemptFormulaFix                               (formula);
-    formula randomFormulaFix                                (formula);
+    formula randomShuffle                                (formula);
     
 public:
     struct metrics {
@@ -70,6 +70,9 @@ public:
         int runtime;
     } stats;
     set<int> finalAssignments;
+    set<int> lastAssignments;
+    set<int> prevAssignments;
+    formula prevFormula;
     
     DavisPutnam                         (string, string, bool);
 };
@@ -135,30 +138,48 @@ DavisPutnam::DavisPutnam(string strategy, string inputFilePath, bool saveFinalAs
  */
 formula DavisPutnam::attemptFormulaFix(formula formula) {
     cout << "trying to fix the formula" << endl;
-    return randomFormulaFix(formula);
+    // If the current formula performed better, we want to keep the current
+    // formula. If the prev formula performed better, we want to reset it.
+    cout << "prev: " << prevAssignments.size() << ", last: " << lastAssignments.size() << endl;
+    if (prevAssignments.size() > lastAssignments.size()) {
+        formula = prevFormula;
+    }
+    prevFormula = formula;
+    prevAssignments = lastAssignments;
+    formula = randomShuffle(formula);
+    return formula;
 }
 
 /**
  * Erases assignments from the given formula for a given probability.
  */
-formula DavisPutnam::randomFormulaFix(formula formula) {
-    int nRemovedClauses = 0;
+formula DavisPutnam::randomShuffle(formula formula) {
+//    int nRemovedClauses = 0;
     struct formula newFormula = formula;
     for (int i = 0; i < formula.clauses.size(); i++) {
         auto const& clause = formula.clauses.at(i);
         // We have found a position assignment. Delete this assignment with a probability
-        // of 0.4.
-        if (clause.size() == 1) {
-            int const randomNumber = (rand() % (10 + 1 - 1)) + 1;
-            if (randomNumber < 6) {
-                newFormula.clauses.erase(newFormula.clauses.begin() + i - nRemovedClauses);
-                nRemovedClauses++;
-                goto end;
-            }
+        // of 0.5.
+        int const random = (rand() % (4 + 1 - 1)) + 1;
+        if (clause.size() == 1 && random == 2) {
+            string const literal = to_string(clause.at(0));
+//            char const& ypos = literal.at(0);
+//            char const& xpos = literal.at(1);
+            char const& val = literal.at(2);
+            // if diagonal change val/pos
+//            if (ypos == xpos) {
+            int const randomx = (rand() % (9 + 1 - 1)) + 1;
+            int const randomy = (rand() % (9 + 1 - 1)) + 1;
+//                int const randomv = (rand() % (9 + 1 - 1)) + 1;
+            int newLiteral = stoi(to_string(randomy) + to_string(randomx) + val);
+            cout << "was: " << literal << " , now is: " << newLiteral << endl;
+            newFormula.clauses[i] = { newLiteral };
+//            }
+            goto end;
         }
     }
     end:
-    cout << "Removed " << nRemovedClauses << " assignments" << endl;
+//    cout << "Removed " << nRemovedClauses << " assignments" << endl;
     return newFormula;
 }
 
@@ -198,12 +219,13 @@ set<int> DavisPutnam::recursive(formula formula, set<int> assignments) {
     tie(newFormula, assignments) = pureLiterals(newFormula, assignments);
     tie(newFormula, assignments) = unitPropagate(newFormula, assignments);
     // When the set of clauses contains an empty clause, the problem is unsatisfiable.
-    if (containsEmptyClause(newFormula)) return {};
+    if (containsEmptyClause(newFormula)) { lastAssignments = assignments; return {}; };
     // We have found a successfull assignment when we have no clauses left.
     if (newFormula.clauses.empty()) return assignments;
     // We perform the branching step by picking a literal that is not yet included
     // in our partial assignment.
     int literal = getNextLiteral(newFormula, getVariables(assignments));
+    if (literal == 0) return {};
     // Split into the TRUE value for the new variable.
     newFormula.push_back({ literal });
     assignments.insert(literal);
