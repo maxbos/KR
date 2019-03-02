@@ -81,9 +81,9 @@ class DavisPutnam {
     void printAssignments                                   (set<int>);
     formula attemptFormulaFix                               (formula);
     formula randomShuffle                                   (formula);
-    formula smartShuffle                                    (formula);
+    tuple<formula, bool> smartShuffle                       (formula);
     tuple<int, int, int> swapAssignmentInBlock              (string, int, vector<int>);
-    
+    set<int> getInitialAssignments                          (formula);
     map<int, vector<int> > getAssignmentsInBlocks           (formula);
     int getBlockIndex                                       (string);
     int getDiagonalConflict                                 (int, set<int>);
@@ -92,6 +92,7 @@ public:
     struct metrics {
         metrics() : nUnsatisfiable(0), nRootVisits(0), nSudokuEdits(0),
         nBacktracks(0), nBacktracksLastTree(0), nRandomNumbers(0),
+        smartShuffles(0), randomShuffles(0),
         uniquelySatisfiable(false)  {};
         int nUnsatisfiable;
         int nRootVisits;
@@ -100,6 +101,8 @@ public:
         int nBacktracksLastTree;
         int nRandomNumbers;
         int runtime;
+        int smartShuffles;
+        int randomShuffles;
         bool uniquelySatisfiable;
         int ymax;
         int blockSize;
@@ -115,7 +118,8 @@ public:
 int main(int argc, char* argv[]) {
     string strategy, inputfile;
     int numberOfRuns;
-    vector<int> runtimes, backtracks, backtracksLastTree, rootVisits, unsatisfiables, uniquelySatisfiables, randomNumberGenerations;
+    vector<int> runtimes, backtracks, backtracksLastTree, rootVisits, unsatisfiables, uniquelySatisfiables,
+        randomNumberGenerations, smartShuffles, randomShuffles;
     tie(strategy, inputfile, numberOfRuns) = parseArguments(argc, argv);
     bool saveFinalAssignments = numberOfRuns == 1;
     for (int i = 0; i < numberOfRuns; i++) {
@@ -134,6 +138,8 @@ int main(int argc, char* argv[]) {
         unsatisfiables.push_back(davisPutnam.stats.nUnsatisfiable);
         randomNumberGenerations.push_back(davisPutnam.stats.nRandomNumbers);
         uniquelySatisfiables.push_back(davisPutnam.stats.uniquelySatisfiable);
+        smartShuffles.push_back(davisPutnam.stats.smartShuffles);
+        randomShuffles.push_back(davisPutnam.stats.randomShuffles);
     }
     float meanRuntime = vectorMean(runtimes);
     double meanBacktracks = vectorMean(backtracks);
@@ -150,6 +156,8 @@ int main(int argc, char* argv[]) {
     cout << "(Average) number of root visits: " << meanRootVisits << endl;
     cout << "(Average) number of unsatisfiables: " << meanUnsatisfiables << endl;
     cout << "(Average) number of random number generations: " << meanRandomNumbers << endl;
+    cout << "(Average) number of smart shuffles: " << vectorMean(smartShuffles) << endl;
+    cout << "(Average) number of random shuffles: " << vectorMean(randomShuffles) << endl;
     cout << "Number of problems that are uniquely satisfiable: " << totalUniquelySatisfiable << endl;
     cout << "Sanity check: " << vectorSum(randomNumberGenerations) << endl;
     return 0;
@@ -173,7 +181,7 @@ DavisPutnam::DavisPutnam(string strategy, string inputFilePath, bool saveFinalAs
     }
     newFormula = setup(formula);
     finalAssignments = solve(newFormula);
-    
+    cout << "Final assignments size: " << finalAssignments.size() << endl;
     tend = time(0);
     stats.runtime = difftime(tend, tstart);
 
@@ -191,9 +199,12 @@ DavisPutnam::DavisPutnam(string strategy, string inputFilePath, bool saveFinalAs
  *
  */
 set<int> DavisPutnam::solve(formula formula) {
+    if (stats.nUnsatisfiable >= 100) {
+        // TODO decide good number
+        return {};
+    }
     set<int> assignments;
     set<int> _finalAssignments = recursive(formula, assignments);
-    cout << "final assignments size: " << finalAssignments.size() << endl;
     if (!_finalAssignments.empty() || strategy == "-S1" || strategy == "-S2") return _finalAssignments;
     stats.nUnsatisfiable++;
     formula = attemptFormulaFix(formula);
@@ -205,37 +216,42 @@ set<int> DavisPutnam::solve(formula formula) {
  * formula.
  */
 formula DavisPutnam::attemptFormulaFix(formula formula) {
-    cout << "trying to fix the formula" << endl;
     // If the current formula performed better, we want to keep the current
     // formula. If the prev formula performed better, we want to reset it.
-    cout << "prev: " << bestAssignments.size() << ", last: " << lastAssignments.size() << endl;
+    cout << "best: " << bestAssignments.size() << ", last: " << lastAssignments.size() << endl;
     if (lastAssignments.size() > bestAssignments.size()) {
         bestAssignments = lastAssignments;
         bestFormula = formula;
     } else {
         formula = bestFormula;
     }
-    formula = smartShuffle(formula);
-    formula = randomShuffle(formula);
-    cout << "changed formula" << endl;
+    bool changeApplied;
+    tie(formula, changeApplied) = smartShuffle(formula);
+    if (!changeApplied) formula = randomShuffle(formula);
     return formula;
 }
 
 
-formula DavisPutnam::smartShuffle(formula formula) {
+tuple<formula, bool> DavisPutnam::smartShuffle(formula formula) {
     struct formula newFormula = formula;
-    set<int> literals = getLiterals(formula);
-    for (auto const& literal : literals) {
-        int conflict = getDiagonalConflict(literal, literals);
-        if (conflict) {
-            
-            
-            // Only fix one conflict at the time
-            return newFormula;
+    set<int> literals = getInitialAssignments(formula);
+    map<int, vector<int> > blocks = getAssignmentsInBlocks(formula);
+    for (auto const& block: blocks) {
+        int const& blockIdx = block.first;
+        auto const& blockAssignments = block.second;
+        for (auto const& literal : blockAssignments) {
+            int conflict = getDiagonalConflict(literal, literals);
+            if (conflict) {
+                int newLiteral, affectedLiteral, newAffectedLiteral;
+                tie(newLiteral, affectedLiteral, newAffectedLiteral) = swapAssignmentInBlock(to_string(literal), blockIdx, blockAssignments);
+                newFormula.swapUnitClause(literal, newLiteral, affectedLiteral, newAffectedLiteral);
+                // Only fix one conflict at the time
+                ++stats.smartShuffles;
+                return make_tuple(newFormula, true);
+            }
         }
-        
     }
-    return formula;
+    return make_tuple(formula, false);
 }
 
 /**
@@ -250,8 +266,8 @@ int DavisPutnam::getDiagonalConflict(int lit, set<int> literals) {
     if (char2int(x) + char2int(y) == stats.ymax + 1) {
         // Literal is on the bottom-left <-> top-right diagonal
         for (int n = 1; n <= stats.ymax; n++) {
-            if (n == char2int(x)) continue;
-            int check = stoi(to_string(n) + to_string(stats.ymax+1-n) + to_string(v));
+            if (n == char2int(y)) continue;
+            int check = stoi(to_string(n) + to_string(stats.ymax+1-n) + string(1, v));
             if (find(literals.begin(), literals.end(), check) != literals.end()) {
                 // Conflict found
                 return check;
@@ -262,7 +278,7 @@ int DavisPutnam::getDiagonalConflict(int lit, set<int> literals) {
         // Literal is on the top-left <-> bottom-right diagonal
         for (int n = 1; n <= stats.ymax; n++) {
             if (n == char2int(x)) continue;
-            int check = stoi(to_string(n) + to_string(n) + to_string(v));
+            int check = stoi(to_string(n) + to_string(n) + string(1, v));
             if (find(literals.begin(), literals.end(), check) != literals.end()) {
                 // Conflict found
                 return check;
@@ -300,6 +316,7 @@ formula DavisPutnam::randomShuffle(formula formula) {
         int newLiteral, affectedLiteral, newAffectedLiteral;
         tie(newLiteral, affectedLiteral, newAffectedLiteral) = swapAssignmentInBlock(to_string(literal), blockIdx, blockAssignments);
         newFormula.swapUnitClause(literal, newLiteral, affectedLiteral, newAffectedLiteral);
+        ++stats.randomShuffles;
     }
     return newFormula;
 }
@@ -324,7 +341,7 @@ tuple<int, int, int> DavisPutnam::swapAssignmentInBlock(string literal, int bloc
         newLiteral += newX;
         newLiteral += v;
     // Try again if the new literal is not in the same block as previous literal.
-    } while (getBlockIndex(newLiteral) != blockIdx);
+    } while (getBlockIndex(newLiteral) != blockIdx || newLiteral == literal);
     // Find a possibly affected literal at position (newY, newX).
     vector<int>::iterator it = find_if(blockAssignments.begin(), blockAssignments.end(), [newY, newX](int const& ass) {
         return to_string(ass).at(0) == newY && to_string(ass).at(1) == newX;
@@ -416,7 +433,6 @@ set<int> DavisPutnam::recursive(formula formula, set<int> assignments) {
     // We perform the branching step by picking a literal that is not yet included
     // in our partial assignment.
     int literal = getNextLiteral(newFormula, getVariables(assignments));
-    cout << "next literal: " << literal << endl;
     if (literal == 0) return {};
     // Split into the TRUE value for the new variable.
     newFormula.push_back({ literal });
@@ -588,6 +604,16 @@ set<int> DavisPutnam::getLiterals(formula formula) {
     for(const auto &v: formula.clauses)
         ret.insert(v.begin(), v.end());
     return ret;
+}
+
+set<int> DavisPutnam::getInitialAssignments(formula formula) {
+    set<int> assignments;
+    for (const auto& clause : formula.clauses) {
+        if (clause.size() == 1) {
+            assignments.insert(clause[0]);
+        }
+    }
+    return assignments;
 }
 
 // Checks whether a given set of clauses contains an empty clause.
