@@ -5,7 +5,7 @@ SAT solver written in C++ that solves sudokus in DIMACS format and can generate 
 ## How to run
 **Compile using g++**
 ```
-g++ -std=c++11 -o SAT main.cpp
+g++ -std=c++14 -o SAT main.cpp
 ```
 Run with arguments
 ```
