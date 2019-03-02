@@ -87,6 +87,7 @@ class DavisPutnam {
     map<int, vector<int> > getAssignmentsInBlocks           (formula);
     int getBlockIndex                                       (string);
     int getDiagonalConflict                                 (int, set<int>);
+    char getRandomPositionInBlock                           (char, int);
     
 public:
     struct metrics {
@@ -211,12 +212,18 @@ formula DavisPutnam::attemptFormulaFix(formula formula) {
     } else {
         formula = bestFormula;
     }
-    bool changeApplied;
-    tie(formula, changeApplied) = smartShuffle(formula);
+    bool changeApplied = false;
+    // Only apply smart shuffle if strategy 4 is enabled.
+    if (strategy == "-S4") {
+        tie(formula, changeApplied) = smartShuffle(formula);
+    }
     if (!changeApplied) formula = randomShuffle(formula);
     return formula;
 }
 
+// 1. shuffle by cell in block
+// 2. set S4 to be smart diagonal shuffle
+// 3. set S5 to be smart diagonal shuffle with cell swap within block
 
 tuple<formula, bool> DavisPutnam::smartShuffle(formula formula) {
     struct formula newFormula = formula;
@@ -317,18 +324,21 @@ tuple<int, int, int> DavisPutnam::swapAssignmentInBlock(string literal, int bloc
     char y = literal.at(0);
     char x = literal.at(1);
     char v = literal.at(2);
+//    cout << "current literal: " << literal;
     do {
         newLiteral = "";
         // Calculate new position for literal.
         newY = y + poss.at(rand() % 3);
         newX = x + poss.at(rand() % 3);
-//        newLiteral = to_string(newY) + to_string(newX) + to_string(v);
+//        newY = getRandomPositionInBlock(y, -1);
+//        newX = getRandomPositionInBlock(x, -1);
         newLiteral += newY;
         newLiteral += newX;
         newLiteral += v;
     // Try again if the new literal is not in the same block as previous literal.
     } while (getBlockIndex(newLiteral) != blockIdx || newLiteral == literal);
     // Find a possibly affected literal at position (newY, newX).
+//    cout << ", new literal: " << newLiteral << endl;
     vector<int>::iterator it = find_if(blockAssignments.begin(), blockAssignments.end(), [newY, newX](int const& ass) {
         return to_string(ass).at(0) == newY && to_string(ass).at(1) == newX;
     });
@@ -373,6 +383,33 @@ int DavisPutnam::getBlockIndex(string literal) {
     int rows = ceil((double)y/(double)stats.blockSize) - 1;
     int idx = rows * blocksPerRow + ceil((double)x/(double)stats.blockSize);
     return idx;
+}
+
+/**
+ *
+ */
+char DavisPutnam::getRandomPositionInBlock(char currentPosition, int presetDoAddition) {
+    int availableSpace;
+    // First pick if subtract or add
+    int doAddition = presetDoAddition != -1 ? presetDoAddition : rand() % 2;
+    // Calculate the current position (in the range) relative to its block
+    int currPosWithinBlock = ((currentPosition-1) % stats.blockSize)+1;
+    // Calculate the available space within the block according to the
+    // randomly picked operator (subtraction or addition).
+    if (doAddition == 0) {
+        availableSpace = currPosWithinBlock - 1;
+    } else {
+        availableSpace = stats.blockSize - currPosWithinBlock;
+    }
+    // If there is no space, we want to try picking a position again, hoping
+    // we get the opposite operator this time that has space.
+    if (availableSpace == 0) {
+        doAddition = doAddition == 0 ? 1 : 0;
+        return getRandomPositionInBlock(currentPosition, doAddition);
+    }
+    // The mutation should be between 0 and the available step space.
+    int randomMutation = rand() % (availableSpace + 1);
+    return currentPosition + pow(-1, (1+doAddition))*randomMutation;
 }
 
 /**
@@ -467,7 +504,7 @@ tuple<formula, set<int> > DavisPutnam::unitPropagate(formula formula, set<int> a
             assignments.insert(literal);
         }
     }
-    if ((strategy == "-S2" || strategy == "-S3") && !new_formula.clauses.empty()) {
+    if (strategy != "-S1" && !new_formula.clauses.empty()) {
         for (auto it = new_formula.clauses.rbegin(); it != new_formula.clauses.rend(); ++it) {
             if ((*it).empty()) continue;
             if ((*it).back() == lefVariable) continue;
@@ -549,7 +586,7 @@ formula DavisPutnam::removeItemsByIndices(formula formula, vector<int> removeInd
 int DavisPutnam::getNextLiteral(formula formula, set<int> currentVariables) {
     if (strategy == "-S1") {
         return getNextRandomLiteral(formula, currentVariables);
-    } else if (strategy == "-S2" || strategy == "-S3") {
+    } else if (strategy == "-S2" || strategy == "-S3" || strategy == "-S4") {
         if (currentVariables.find(abs(lefVariable)) == currentVariables.end()) {
             return lefVariable;
         } else {
