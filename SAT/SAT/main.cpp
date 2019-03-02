@@ -92,8 +92,7 @@ public:
     struct metrics {
         metrics() : nUnsatisfiable(0), nRootVisits(0), nSudokuEdits(0),
         nBacktracks(0), nBacktracksLastTree(0), nRandomNumbers(0),
-        smartShuffles(0), randomShuffles(0),
-        uniquelySatisfiable(false)  {};
+        smartShuffles(0), randomShuffles(0), solved(false)  {};
         int nUnsatisfiable;
         int nRootVisits;
         int nSudokuEdits;
@@ -103,7 +102,7 @@ public:
         int runtime;
         int smartShuffles;
         int randomShuffles;
-        bool uniquelySatisfiable;
+        bool solved;
         int ymax;
         int blockSize;
     } stats;
@@ -118,8 +117,8 @@ public:
 int main(int argc, char* argv[]) {
     string strategy, inputfile;
     int numberOfRuns;
-    vector<int> runtimes, backtracks, backtracksLastTree, rootVisits, unsatisfiables, uniquelySatisfiables,
-        randomNumberGenerations, smartShuffles, randomShuffles;
+    vector<int> runtimes, backtracks, backtracksLastTree, rootVisits, unsatisfiables,
+        randomNumberGenerations, smartShuffles, randomShuffles, solvedProblems;
     tie(strategy, inputfile, numberOfRuns) = parseArguments(argc, argv);
     bool saveFinalAssignments = numberOfRuns == 1;
     for (int i = 0; i < numberOfRuns; i++) {
@@ -137,29 +136,21 @@ int main(int argc, char* argv[]) {
         rootVisits.push_back(davisPutnam.stats.nRootVisits);
         unsatisfiables.push_back(davisPutnam.stats.nUnsatisfiable);
         randomNumberGenerations.push_back(davisPutnam.stats.nRandomNumbers);
-        uniquelySatisfiables.push_back(davisPutnam.stats.uniquelySatisfiable);
         smartShuffles.push_back(davisPutnam.stats.smartShuffles);
         randomShuffles.push_back(davisPutnam.stats.randomShuffles);
+        solvedProblems.push_back(davisPutnam.stats.solved);
     }
-    float meanRuntime = vectorMean(runtimes);
-    double meanBacktracks = vectorMean(backtracks);
-    double meanBacktracksLastTree = vectorMean(backtracksLastTree);
-    double meanRootVisits = vectorMean(rootVisits);
-    double meanUnsatisfiables = vectorMean(unsatisfiables);
-    double meanRandomNumbers = vectorMean(randomNumberGenerations);
-    int totalUniquelySatisfiable = vectorSum(uniquelySatisfiables);
     
-    cout << "Number of problems (solved or unsolved): " << numberOfRuns << endl;
-    cout << "(Average) runtime: " << meanRuntime << " second(s)."<< endl;
-    cout << "(Average) number of backtracks: " << meanBacktracks << endl;
-    cout << "(Average) number of backtracks in last tree: " << meanBacktracksLastTree << endl;
-    cout << "(Average) number of root visits: " << meanRootVisits << endl;
-    cout << "(Average) number of unsatisfiables: " << meanUnsatisfiables << endl;
-    cout << "(Average) number of random number generations: " << meanRandomNumbers << endl;
+    cout << "Total number of problems: " << numberOfRuns << endl;
+    cout << "Total number of solved problems: " << vectorSum(solvedProblems) << endl;
+    cout << "(Average) runtime: " << vectorMean(runtimes) << " second(s)."<< endl;
+    cout << "(Average) number of backtracks: " << vectorMean(backtracks) << endl;
+    cout << "(Average) number of backtracks in last tree: " << vectorMean(backtracksLastTree) << endl;
+    cout << "(Average) number of root visits: " << vectorMean(rootVisits) << endl;
+    cout << "(Average) number of unsatisfiables: " << vectorMean(unsatisfiables) << endl;
+    cout << "(Average) number of random number generations: " << vectorMean(randomNumberGenerations) << endl;
     cout << "(Average) number of smart shuffles: " << vectorMean(smartShuffles) << endl;
     cout << "(Average) number of random shuffles: " << vectorMean(randomShuffles) << endl;
-    cout << "Number of problems that are uniquely satisfiable: " << totalUniquelySatisfiable << endl;
-    cout << "Sanity check: " << vectorSum(randomNumberGenerations) << endl;
     return 0;
 }
 
@@ -181,16 +172,10 @@ DavisPutnam::DavisPutnam(string strategy, string inputFilePath, bool saveFinalAs
     }
     newFormula = setup(formula);
     finalAssignments = solve(newFormula);
-    cout << "Final assignments size: " << finalAssignments.size() << endl;
+    
     tend = time(0);
     stats.runtime = difftime(tend, tstart);
-
-//    for (auto assignment : finalAssignments) {
-//        if (assignment > 0) clause.push_back(-assignment);
-//    }
-//    newFormula.clauses.push_back(clause);
-//    set<int> newAssignments = recursive(newFormula, assignments);
-//    stats.uniquelySatisfiable = newAssignments.empty();
+    stats.solved = finalAssignments.size() != 0;
     
     saveOutput();
 }
