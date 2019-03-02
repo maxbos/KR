@@ -168,6 +168,7 @@ DavisPutnam::DavisPutnam(string strategy, string inputFilePath, bool saveFinalAs
     formula = readDimacsFile(inputFilePath);
     if (strategy == "-S3" || strategy == "-S4") {
         struct formula xSudokuRules = readDimacsFile("resources/x-sudoku-rules.txt");
+        if (xSudokuRules.clauses.size() == 0) throw "Could not find/parse resources/x-sudoku-rules.txt file";
         formula.insert(xSudokuRules);
     }
     newFormula = setup(formula);
