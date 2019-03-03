@@ -205,13 +205,12 @@ set<int> DavisPutnam::solve(formula formula) {
 formula DavisPutnam::attemptFormulaFix(formula formula) {
     // If the current formula performed better, we want to keep the current
     // formula. If the prev formula performed better, we want to reset it.
-    cout << "best: " << bestAssignments.size() << ", last: " << lastAssignments.size() << endl;
-    if (lastAssignments.size() > bestAssignments.size()) {
-        bestAssignments = lastAssignments;
-        bestFormula = formula;
-    } else {
-        formula = bestFormula;
-    }
+   if (lastAssignments.size() > bestAssignments.size()) {
+       bestAssignments = lastAssignments;
+       bestFormula = formula;
+   } else {
+       formula = bestFormula;
+   }
     bool changeApplied = false;
     // Only apply smart shuffle if strategy 4 is enabled.
     if (strategy == "-S4") {
@@ -220,10 +219,6 @@ formula DavisPutnam::attemptFormulaFix(formula formula) {
     if (!changeApplied) formula = randomShuffle(formula);
     return formula;
 }
-
-// 1. shuffle by cell in block
-// 2. set S4 to be smart diagonal shuffle
-// 3. set S5 to be smart diagonal shuffle with cell swap within block
 
 tuple<formula, bool> DavisPutnam::smartShuffle(formula formula) {
     struct formula newFormula = formula;
