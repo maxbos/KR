@@ -3,6 +3,8 @@
 SAT solver written in C++ that solves sudokus in DIMACS format and can generate x-sudokus (sudokus with diagonal constraints) from regular sudokus.
 
 ## How to run
+**Using binary (Linux or macOS)**  
+Skip the compilation step, run the binary as specified below. Unfortunately, we don't have access to a Windows environment so no Windows binary is available. In all cases it's best to compile the code yourself to avoid compilation differences between computers.   
 **Compile using g++**
 ```
 g++ -std=c++14 -o SAT main.cpp
