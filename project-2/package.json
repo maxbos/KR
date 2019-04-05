@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "d3": "^5.9.2",
+    "d3-graphviz": "^2.6.1",
+    "graphviz-react": "^1.0.2",
     "react": "^16.8.4",
     "react-dom": "^16.8.4",
     "react-scripts": "2.1.8"
