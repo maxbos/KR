@@ -1,0 +1,12 @@
+Number of assignments is: 729
+The final assignment is: 115 129 134 142 158 167 173 181 196 217 226 231 249 253 265 272 284 298 312 328 333 346 354 361 375 387 399 414 423 438 441 456 469 477 485 492 511 527 536 545 552 568 574 589 593 619 625 632 643 657 664 678 686 691 716 724 737 748 751 763 779 782 795 813 821 839 847 855 862 876 888 894 918 922 935 944 959 966 971 983 997 
+
+Number of positive assignments: 81
+Assignments written to file: resources/0.txt.out
+Number of problems (solved or unsolved): 1
+(Average) runtime: 306 second(s).
+(Average) number of backtracks: 309
+(Average) number of backtracks in last tree: 4
+(Average) number of root visits: 68
+(Average) number of unsatisfiables: 66
+Number of problems that are uniquely satisfiable: 1

@@ -8,15 +8,14 @@
 .vscode/*
 
 # Binaries
-SAT
+Binaries/
 preprocess
 
 # Output files
 *.o
 
 # Resources
-*/Project\ 1\ (SAT)/resources/1000-sudokus/*
-*/SAT/resources/1000-sudokus/*
+1000-sudokus/
 
 # Xcode files
 xcuserdata/
