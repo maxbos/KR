@@ -3,8 +3,11 @@ class StateTree {
    * 
    * @param {Object} states id-state mapping 
    */
-  constructor(states = {}) {
-    this.states = states;
+  constructor(state) {
+    this.states = {};
+    if (state) {
+      this.addState(state);
+    }
   }
 
   /**

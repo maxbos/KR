@@ -1,11 +1,9 @@
-import { State, StateTree, TreeLevel } from '.';
-
-const ROOT_STATE_VALUE = '0, 0, 0, 0';
+import { Quantity, State, StateTree, TreeLevel } from '.';
 
 class World {
   constructor() {
     this.init();
-    this.stateCount = 0;
+    this.stateCount = -1;
   }
 
   /**
@@ -15,19 +13,42 @@ class World {
     return ++this.stateCount;
   }
 
+  /**
+   * 
+   * @param {String} stateValue 
+   */
+  newState(stateValue) {
+    return new State(this.nextId(), stateValue);
+  }
+
+  setupInitialState() {
+    const state = this.newState({
+      'Inflow': new Quantity(['0', '+']),
+      'Volume': new Quantity(['0', '+', 'max']),
+      'Outflow': new Quantity(['0', '+', 'max']),
+    });
+    state.setQuantityDependency('positiveInfluence', 'Inflow', 'Volume');
+    state.setQuantityDependency('negativeInfluence', 'Outflow', 'Volume');
+    state.setQuantityDependency('positiveProportional', 'Volume', 'Outflow');
+    state.setQuantityDependency('valueConstraint', 'Volume', 'max', 'Outflow', 'max');
+    state.setQuantityDependency('valueConstraint', 'Volume', '0', 'Outflow', '0');
+    return state;
+  }
+
   init() {
-    const stateTree = new StateTree();
-    const rootState = new State(ROOT_STATE_VALUE);
+    const rootState = this.setupInitialState();
+    const stateTree = new StateTree(rootState);
+    rootState.setQuantity('inflow', 'derivative', '+');
     let currentTreeLevel = new TreeLevel(rootState.next());
     while (!currentTreeLevel.isEmpty()) {
       const nextTreeLevel = new TreeLevel();
-      for (const stateValue in currentTreeLevel.get()) {
-        const state = new State(stateValue);
+      for (const [stateValue, parentIds] in currentTreeLevel.get()) {
+        const state = this.newState(stateValue);
         // Add the current state as a free node (not yet any connections) to
         // the state-tree.
         stateTree.addState(state);
         // Get the IDs for the states from which the current state originated.
-        const parentIds = currentTreeLevel.getStateValueParents(stateValue);
+        // const parentIds = currentTreeLevel.getStateValueParents(stateValue);
         // Add the parent-child connection to each parent state that is included
         // in the `parentIds` list.
         stateTree.addConnections(parentIds, state.id());
