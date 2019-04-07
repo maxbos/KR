@@ -3,11 +3,7 @@ import { graphviz} from 'd3-graphviz';
 import * as d3 from "d3";
 import './App.css';
 
-class App extends Component {
-  constructor(props) {
-    super(props);
-  }
-  
+class App extends Component {  
   componentDidMount() {
     var dotIndex = 0;
     var graphviz = d3.select("#graph").graphviz()
