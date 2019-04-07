@@ -23,9 +23,9 @@ class World {
 
   setupInitialState() {
     const state = this.newState({
-      'Inflow': new Quantity(['0', '+']),
-      'Volume': new Quantity(['0', '+', 'max']),
-      'Outflow': new Quantity(['0', '+', 'max']),
+      'Inflow': new Quantity(['0', '+'], '0', '0'),
+      'Volume': new Quantity(['0', '+', 'max'], '0', '0'),
+      'Outflow': new Quantity(['0', '+', 'max'], '0', '0'),
     });
     state.setQuantityDependency('positiveInfluence', 'Inflow', 'Volume');
     state.setQuantityDependency('negativeInfluence', 'Outflow', 'Volume');
