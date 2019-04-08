@@ -49,7 +49,7 @@ class State {
    * @param  {...String} dependencyInfo 
    */
   setQuantityDependency(dependencyType, quantityName, ...dependencyInfo) {
-    this.quantities[quantityName].setDependency(dependencyType, ...dependencyInfo, this.quantities);
+    this.quantities[quantityName].setDependency(dependencyType, [quantityName, ...dependencyInfo], this.quantities);
   }
 
   /**

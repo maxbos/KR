@@ -1,8 +1,8 @@
 import { Quantity, State, StateTree, TreeLevel } from '.';
 
-const INFLOW = { space: ['0', '+'], magnitude: '0', derivative: '0' };
-const VOLUME = { space: ['0', '+', 'max'], magnitude: '0', derivative: '0' };
-const OUTFLOW = { space: ['0', '+', 'max'], magnitude: '0', derivative: '0' };
+const INFLOW = { space: ['0', '+'], numericSpace: [0, 1], magnitude: '0', derivative: '0' };
+const VOLUME = { space: ['0', '+', 'max'], numericSpace: [0, 1, 2], magnitude: '0', derivative: '0' };
+const OUTFLOW = { space: ['0', '+', 'max'], numericSpace: [0, 1, 2], magnitude: '0', derivative: '0' };
 
 class World {
   constructor() {
