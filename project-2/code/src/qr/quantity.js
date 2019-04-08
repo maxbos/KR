@@ -8,27 +8,26 @@ class Quantity {
    * @param {String} magnitude 
    * @param {String} derivative 
    */
-  constructor(space, magnitude, derivative) {
+  constructor({ space, magnitude, derivative }) {
     this.space = space;
     this.magnitude = magnitude;
     this.derivative = derivative;
     this.dependencies = [];
+    this.nextStateFromLogicalConsequence = [];
     this.nextState = [];
-  }
-
-  set(type, value) {
-    this[type] = value;
+    this.nextStateGeneratorCount = 0;
   }
 
   setDependency(dependencyType, dependencyInfo, quantities) {
-    this.dependencies.append([dependencyType, dependencyInfo, quantities]);
+    this.dependencies.push([dependencyType, dependencyInfo, quantities]);
   }
 
   logicalConsequence() {
-    const idx = DERIVATIVE_SPACE.findIndex(this.derivative);
+    const idx = DERIVATIVE_SPACE.findIndex((e) => e === this.derivative);
     // Change the magnitude based on the derivative integer value, e.g. magnitude
     // of 'max' becomes '+' if derivative is '-' because derivative integer is -1.
-    const magnitude = this.space[this.space.findIndex(this.magnitude) + DERIVATIVE_SPACE_INT[idx]];
+    const magnitudeIdx = this.space.findIndex((e) => e === this.magnitude);
+    const magnitude = this.space[magnitudeIdx + DERIVATIVE_SPACE_INT[idx]];
     // Add the base state, and also add a state for each possible alteration of the
     // derivative.
     for (let i = -1; i++; i <= 1) {
@@ -38,15 +37,15 @@ class Quantity {
       if (derivativeIdx < 0 || derivativeIdx > (DERIVATIVE_SPACE.length - 1)) {
         continue;
       }
-      this.nextState.append([{
+      this.nextStateFromLogicalConsequence.push([{
         magnitude,
         'derivative': DERIVATIVE_SPACE[derivativeIdx],
       }]);
     }
   }
 
-  send() {
-
+  propagate() {
+    return [];
   }
 
   /**
@@ -54,13 +53,26 @@ class Quantity {
    * by a dependency.
    * @param {String} type either 'derivative' or 'magnitude'
    * @param {String} value the value for the type
+   * @param {Object} causation an Object containing the cause of this state change
    */
-  receive(type, value) {
+  receive(type, value, causation) {
     const otherType = type === 'derivative' ? 'magnitude' : 'derivative';
-    this.nextState.append({
+    this.nextState.push({
       [type]: value,
       [otherType]: this[otherType],
+      space: this.space,
+      causation,
     });
+  }
+
+  getNextState() {
+    // If there does not exist any changed next state, we return
+    // the original unchanged state.
+    if (this.nextState.length === 0) {
+      return { 'magnitude': this.magnitude, 'derivative': this.derivative, 'space': this.space, };
+    }
+    // Otherwise, we return the next state.
+    return this.nextState[this.nextStateGeneratorCount++];
   }
 
   positiveInfluence(dependentQuantityName, quantities) {

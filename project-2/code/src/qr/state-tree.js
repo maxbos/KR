@@ -15,7 +15,7 @@ class StateTree {
    * @param {State} state 
    */
   addState(state) {
-    this.states[state.id()] = state;
+    this.states[state.getId()] = state;
   }
   
   /**
