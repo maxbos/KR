@@ -1,3 +1,5 @@
+import isEqual from 'lodash/isEqual';
+
 class State {
   /**
    * 
@@ -7,12 +9,13 @@ class State {
   constructor(id, quantities) {
     this.id = id;
     this.quantities = quantities;
+    this.childIds = [];
   }
 
   /**
    * @returns unique state id
    */
-  id() {
+  getId() {
     return this.id;
   }
 
@@ -21,7 +24,7 @@ class State {
    * @param {Number} childId 
    */
   addChildConnection(childId) {
-    this.childIds.append(childId);
+    this.childIds.push(childId);
   }
 
   /**
@@ -30,8 +33,13 @@ class State {
    * @param {String} type either 'magnitude' or 'derivative'
    * @param {String} value new value for the quantity type
    */
-  setQuantity(name, type, value) {
-    this.quantities[name].set(type, value);
+  setNextQuantityState(quantityName, quantityType, quantityValue) {
+    this.quantities[quantityName].receive(quantityType, quantityValue, {
+      cause: 'exogenousAction',
+      quantityName,
+      quantityType,
+      quantityValue,
+    });
   }
 
   /**
@@ -45,6 +53,46 @@ class State {
   }
 
   /**
+   * Retrieves the next quantity state for each quantity.
+   * @returns an Object of quantityName-states pairs
+   */
+  // getNextQuantityStatesMap() {
+  //   const quantityStates = {};
+  //   for (const quantityName in this.quantities) {
+  //     if (!(quantityName in quantityStates)) {
+  //       quantityStates[quantityName] = [];
+  //     }
+  //     quantityStates[quantityName].push(this.quantities[quantityName].getNextStates());
+  //   }
+  //   return quantityStates;
+  // }
+
+  /**
+   * @returns an Array of Objects, each Object containing values for a
+   * full potential State
+   */
+  generateNextStateCombinations() {
+    const nextStates = [];
+    while (true) {
+      const nextState = {};
+      for (const quantityName in this.quantities) {
+        nextState[quantityName] = this.quantities[quantityName].getNextState();
+      }
+      // If the new state is equal to the previous generated state,
+      // it means that all possible combinations are generated, so
+      // we stop the state combination generation.
+      if (isEqual(nextState, nextStates[nextStates.length - 1])) {
+        break;
+      }
+      nextStates.push([nextState, [this.getId()]]);
+      break;
+    }
+    this.nextStates = nextStates;
+    console.log(nextStates);
+    return nextStates;
+  }
+
+  /**
    * Generates next states for the current state, by first checking for
    * logical consequences from the current derivative values for each quantity.
    * Then each quantity communicates its values to their dependencies, from
@@ -54,7 +102,17 @@ class State {
    * @returns a list of stateValues
    */
   next() {
-    return [];
+    // First check all quantities for logical consequences from the current quantity
+    // state values, e.g. setting magnitude from '0' to '+' if derivative is '+'.
+    for (const quantityName in this.quantities) {
+      this.quantities[quantityName].logicalConsequence();
+    }
+    console.log(this.quantities);
+    // Second, propagate the state value changes from performing the logical
+    // consequences through the entire system.
+    this.quantities['Inflow'].propagate();
+    // Lastly, get the combinations of quantities.
+    return this.generateNextStateCombinations();
   }
 }
 

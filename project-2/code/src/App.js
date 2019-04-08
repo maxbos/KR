@@ -2,6 +2,7 @@ import React, { Component } from 'react';
 import { graphviz} from 'd3-graphviz';
 import World from './qr/world.js';
 import * as d3 from "d3";
+import { World } from './qr';
 import './App.css';
 
 class App extends Component {  

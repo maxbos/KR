@@ -3,7 +3,7 @@ import merge from 'lodash/merge';
 class TreeLevel {
   /**
    * 
-   * @param {Object} stateValues mapping of stateValues and parent State IDs
+   * @param {Array} stateValues mapping of stateValues and parent State IDs
    */
   constructor(stateValues) {
     this.stateValues = stateValues;
@@ -11,7 +11,7 @@ class TreeLevel {
 
   /**
    * For each state value that already exists, merge the connections.
-   * @param {Object} stateValues mapping of stateValues and parent State IDs
+   * @param {Array} stateValues mapping of stateValues and parent State IDs
    */
   add(stateValues) {
     this.stateValues = merge(this.stateValues, stateValues);
