@@ -72,7 +72,6 @@ class World {
       break;
       currentTreeLevel = nextTreeLevel;
     }
-    this.stateTree = stateTree;
   }
 
   /**
