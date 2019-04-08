@@ -2,8 +2,8 @@ import { Quantity, State, StateTree, TreeLevel } from '.';
 
 class World {
   constructor() {
-    this.init();
     this.stateCount = -1;
+    this.init();
   }
 
   /**
@@ -58,6 +58,7 @@ class World {
       }
       currentTreeLevel = nextTreeLevel;
     }
+    this.stateTree = stateTree;
   }
 }
 
