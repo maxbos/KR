@@ -16,6 +16,7 @@ preprocess
 
 # Resources
 1000-sudokus/
+*/SAT/resources/1000-sudokus/*
 
 # Xcode files
 xcuserdata/
