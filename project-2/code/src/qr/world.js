@@ -1,8 +1,17 @@
 import { Quantity, State, StateTree, TreeLevel } from '.';
 
-const INFLOW = { space: ['0', '+'], numericSpace: [0, 1], magnitude: '0', derivative: '0' };
-const VOLUME = { space: ['0', '+', 'max'], numericSpace: [0, 1, 2], magnitude: '0', derivative: '0' };
-const OUTFLOW = { space: ['0', '+', 'max'], numericSpace: [0, 1, 2], magnitude: '0', derivative: '0' };
+const INFLOW = {
+  space: { labels: ['0', '+'], numeric: [0, 1] },
+  magnitude: 0, derivative: 0,
+};
+const VOLUME = {
+  space: { labels: ['0', '+', 'max'], numeric: [0, 1, 2] },
+  magnitude: 0, derivative: 0,
+};
+const OUTFLOW = {
+  space: { labels: ['0', '+', 'max'], numeric: [0, 1, 2] },
+  magnitude: 0, derivative: 0,
+};
 
 class World {
   constructor() {
@@ -27,7 +36,6 @@ class World {
     for (const quantityName in stateValue) {
       quantities[quantityName] = new Quantity(stateValue[quantityName]);
     }
-    console.log(stateValue, quantities);
     return new State(this.nextId(), quantities);
   }
 
@@ -48,7 +56,7 @@ class World {
   init() {
     const rootState = this.setupInitialState();
     this.stateTree.addState(rootState);
-    rootState.setNextQuantityState('Inflow', 'derivative', '+');
+    rootState.setNextQuantityState('Inflow', 'derivative', 1);
     let currentTreeLevel = new TreeLevel(rootState.next());
     while (!currentTreeLevel.isEmpty()) {
       const nextTreeLevel = new TreeLevel();
@@ -59,8 +67,6 @@ class World {
         // Add the current state as a free node (not yet any connections) to
         // the state-tree.
         this.stateTree.addState(state);
-        // Get the IDs for the states from which the current state originated.
-        // const parentIds = currentTreeLevel.getStateValueParents(stateValue);
         // Add the parent-child connection to each parent state that is included
         // in the `parentIds` list.
         this.stateTree.addConnections(parentIds, state.getId());

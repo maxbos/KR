@@ -10,6 +10,9 @@ class State {
     this.id = id;
     this.quantities = quantities;
     this.childIds = [];
+    for (const q in this.quantities) {
+      this.quantities[q].state = this;
+    }
   }
 
   /**
@@ -49,7 +52,7 @@ class State {
    * @param  {...String} dependencyInfo 
    */
   setQuantityDependency(dependencyType, quantityName, ...dependencyInfo) {
-    this.quantities[quantityName].setDependency(dependencyType, [quantityName, ...dependencyInfo], this.quantities);
+    this.quantities[quantityName].setDependency(dependencyType, [quantityName, ...dependencyInfo]);
   }
 
   /**
@@ -76,6 +79,7 @@ class State {
     while (true) {
       const nextState = {};
       for (const quantityName in this.quantities) {
+        console.log('get next state for ' + quantityName);
         nextState[quantityName] = this.quantities[quantityName].getNextState();
       }
       // If the new state is equal to the previous generated state,
@@ -84,7 +88,7 @@ class State {
       if (isEqual(nextState, nextStates[nextStates.length - 1])) {
         break;
       }
-      nextStates.push([nextState, [this.getId()]]);
+      nextStates.push([nextState, [this.id]]);
       break;
     }
     this.nextStates = nextStates;

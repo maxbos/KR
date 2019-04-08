@@ -11,6 +11,7 @@ class App extends Component {
       states: new World().stateTree.states,
       animateStates: false,
     };
+    console.log(this.state.states);
     this.handleInputChange = this.handleInputChange.bind(this);
   }
 
