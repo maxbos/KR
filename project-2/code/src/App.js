@@ -34,13 +34,13 @@ class App extends Component {
 
       for (let idx in types)  {
         let type = types[idx];
+        let maxValue = (type === 'Volume' || type === 'Outflow') ? 'max\n' : '';
         if (state.quantities[type].derivative === 'max') {
           dot.push(type.toLowerCase() + 'derivative [label="Derivative:\n➡️max\n+\n0" shape=box fillcolor="#BB8FCE"]');
-          
         } else if (state.quantities[type].derivative === '+') {
-          dot.push(type.toLowerCase() + 'derivative [label="Derivative:\nmax\n➡️+\n0" shape=box fillcolor="#BB8FCE"]');
+          dot.push(`${type.toLowerCase()}derivative [label="Derivative:\n${maxValue}➡️+\n0" shape=box fillcolor="#BB8FCE"]`)
         } else if (state.quantities[type].derivative === '0') {
-          dot.push(type.toLowerCase() + 'derivative [label="Derivative:\nmax\n+\n➡️0" shape=box fillcolor="#BB8FCE"]');
+          dot.push(`${type.toLowerCase()}derivative [label="Derivative:\n${maxValue}+\n➡️0" shape=box fillcolor="#BB8FCE"]`)
         }
         if (state.quantities[type].magnitude === 'max') {
           dot.push(type.toLowerCase() + 'magnitude [label="Magnitude:\n➡️max\n+\n0" shape=box fillcolor="#FAAC58"]')
@@ -137,6 +137,7 @@ class App extends Component {
         <form>
           <label>Animate states</label>
           <input name="animateStates" type="checkbox" value={this.state.animateStates} onChange={this.handleInputChange}/>
+          ⬅️(the first two clicks are not registered due to a bug)
         </form>
         <div id="graph"  style={{textAlign: "center"}} />
       </div>
