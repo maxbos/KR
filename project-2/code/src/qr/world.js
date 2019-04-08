@@ -38,7 +38,7 @@ class World {
   init() {
     const rootState = this.setupInitialState();
     const stateTree = new StateTree(rootState);
-    rootState.setQuantity('inflow', 'derivative', '+');
+    rootState.setQuantity('Inflow', 'derivative', '+');
     let currentTreeLevel = new TreeLevel(rootState.next());
     while (!currentTreeLevel.isEmpty()) {
       const nextTreeLevel = new TreeLevel();

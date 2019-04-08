@@ -21,7 +21,7 @@ class Quantity {
   }
 
   setDependency(dependencyType, dependencyInfo, quantities) {
-    this.dependencies.append([dependencyType, dependencyInfo, quantities]);
+    this.dependencies.push([dependencyType, dependencyInfo, quantities]);
   }
 
   logicalConsequence() {
