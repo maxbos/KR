@@ -73,6 +73,7 @@ class App extends Component {
   getRegularDots() {
     let states = this.state.states;
     let dot = [];
+    let connections = [];
     dot.push(
       'digraph  {',
       'node [style="filled"]');
@@ -85,10 +86,14 @@ class App extends Component {
       let outflow = state.quantities['Outflow'].magnitude;
       let dOutflow = state.quantities['Outflow'].derivative;
       dot.push(
-        `state${stateId} [label="${stateId}\nInflow: ${inflow}\t\t∂Inflow: ${dInflow}\nVolume: ${volume}\t\t∂Volume: ${dVolume}\nOutflow: ${outflow}\t\t∂Outflow: ${dOutflow}"]`
+        `state${stateId} [label="${stateId}\nInflow: ${inflow}\t\t∂Inflow: ${dInflow}\nVolume: ${volume}\t\t∂Volume: ${dVolume}\nOutflow: ${outflow}\t\t∂Outflow: ${dOutflow}"]\n`
       );
+      for (let child in state.childIds) {
+        let childId = state.childIds[child];
+        connections.push(`state${stateId} -> state${childId}\n`);
+      }
     }
-    // TODO: add connections between states
+    dot.push(...connections);
     dot.push('}');
     return [dot];
   }
