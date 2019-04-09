@@ -14,9 +14,6 @@ class Quantity {
     this.derivative = derivative;
     this.dependencies = dependencies;
     this.forcedNextState = null;
-    // this.nextStateFromLogicalConsequence = [];
-    // this.nextState = [];
-    // this.nextStateGeneratorCount = 0;
   }
 
   /**
@@ -191,106 +188,6 @@ class Quantity {
     }
     return nextStates;
   }
-
-  // propagate() {
-  //   // Perform each dependency.
-  //   console.log('PROPAGATE');
-  //   for (const idx in this.dependencies) {
-  //     console.log('depdency idx ' + idx);
-  //     const dep = this.dependencies[idx];
-  //     console.log(dep[0], dep[1]);
-  //     this[dep[0]](...dep[1]);
-  //   }
-  //   return;
-  // }
-
-  /**
-   * Receives a new value for a given type from a different Quantity caused
-   * by a dependency.
-   * @param {String} type either 'derivative' or 'magnitude'
-   * @param {String} value the value for the type
-   * @param {Object} causation an Object containing the cause of this state change
-   */
-  // receive(type, value, causation) {
-  //   const isDerivative = type === 'derivative';
-  //   const otherType = isDerivative ? 'magnitude' : 'derivative';
-  //   console.log('RECEIVED THE CALLLL');
-  //   this.nextState.push({
-  //     // In the case of a derivative change, increment the current derivative with
-  //     // the given value. In the case of a magnitude, set the current magnitude
-  //     // to the given value.
-  //     [type]: isDerivative ? Math.max(-1, Math.min(1, this.derivative+value)) : value,
-  //     [otherType]: this[otherType],
-  //     space: this.space,
-  //     dependencies: this.dependencies,
-  //     causation,
-  //   });
-  // }
-
-  // getNextState() {
-  //   console.log(this.nextState);
-  //   // if (this.nextState.length === 0) {
-  //   //   this.nextState = this.nextStateFromLogicalConsequence;
-  //   // }
-  //   // If there does not exist any changed next state, we return
-  //   // the original unchanged state.
-  //   if (this.nextState.length === 0) {
-  //     return {
-  //       'magnitude': this.magnitude, 'derivative': this.derivative,
-  //       'space': this.space, 'dependencies': this.dependencies,
-  //     };
-  //   }
-  //   // Otherwise, we return the next state.
-  //   // console.log(this.nextState[this.nextStateGeneratorCount]);
-  //   return this.nextState[this.nextStateGeneratorCount++];
-  // }
-
-  // positiveInfluence([ quantityName, dependentQuantityName ]) {
-  //   console.log('POSITIVE INFLUENCE CALLED');
-  //   // If the quantity magnitude is greater than zero,
-  //   // we send the derivative to the depedent quantity.
-  //   if (this.magnitude > 0) {
-  //     this.state.quantities[dependentQuantityName].receive('derivative', 1, {
-  //       cause: 'positiveInfluence',
-  //       quantityName,
-  //       dependentQuantityName,
-  //     });
-  //   }
-  // }
-
-  // negativeInfluence([ quantityName, dependentQuantityName ]) {
-  //   // If the quantity magnitude is greater than zero,
-  //   // we send the derivative to the depedent quantity.
-  //   if (this.magnitude > 0) {
-  //     this.state.quantities[dependentQuantityName].receive('derivative', -1, {
-  //       cause: 'negativeInfluence',
-  //       quantityName,
-  //       dependentQuantityName,
-  //     });
-  //   }
-  // }
-
-  // positiveProportional([ quantityName, dependentQuantityName ]) {
-  //   if (this.derivative > 0) {
-  //     this.state.quantities[dependentQuantityName].receive('derivative', 1, {
-  //       cause: 'positiveProportional',
-  //       quantityName,
-  //       dependentQuantityName,
-  //     });
-  //   }
-  // }
-
-  // valueConstraint([ quantityName, quantityValue, dependentQuantityName, dependentValue ]) {
-  //   if (this.magnitude === this.getSpaceNumeric(quantityValue)) {
-  //     this.state.quantities[dependentQuantityName].receive('magnitude', this.getSpaceNumeric(dependentValue), {
-  //       cause: 'valueConstraint',
-  //       quantityName,
-  //       quantityValue,
-  //       dependentQuantityName,
-  //       dependentValue,
-  //     });
-  //   }
-  // }
 
   /**
    * Returns the integer/numeric value for a given magnitude label.
