@@ -5,7 +5,7 @@ class StateTree {
    */
   constructor(state) {
     this.states = {};
-    this.stringStates = [];
+    this.stringStates = {};
     if (state) {
       this.addState(state);
     }
@@ -17,7 +17,7 @@ class StateTree {
    */
   addState(state) {
     this.states[state.id] = state;
-    this.stringStates.push(this.toStringState(state));
+    this.stringStates[this.toStringState(state)] = state.id;
   }
 
   /**
@@ -40,8 +40,8 @@ class StateTree {
    */
   findStateId(state) {
     const targetStateString = this.toStringState(state);
-    const foundState = this.stringStates.find((s) => s === targetStateString);
-    return foundState ? foundState.id : -1;
+    const foundStateId = this.stringStates[targetStateString];
+    return foundStateId || -1;
   }
   
   /**

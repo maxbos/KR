@@ -66,7 +66,6 @@ class World {
       const nextTreeLevel = new TreeLevel();
       const currentTree = currentTreeLevel.get();
       for (const idx in currentTree) {
-        console.log('!!!CONSIDERING NEW NODE IN TREE LEVEL!!!');
         const { stateValue, parentId } = currentTree[idx];
         // If the state tree does not yet contain this state value,
         // we want to add this state,
@@ -84,10 +83,11 @@ class World {
         // Add the parent-child connection to each parent state that is included
         // in the `parentIds` list.
         this.stateTree.addConnection(parentId, stateId);
+        count++;
+        // if (count > 12) { break; }
       }
       console.log(nextTreeLevel);
-      count++;
-      if (count > 6) { break; }
+      // if (count > 12) { break; }
       currentTreeLevel = nextTreeLevel;
     }
   }

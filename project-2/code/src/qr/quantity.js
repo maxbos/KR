@@ -68,18 +68,17 @@ class Quantity {
       return [this.forcedNextState, `set derivative of ${name} to 1`];
     }
     let magnitude = this.magnitude;
-    console.log('processderivative', name, 'current magnitude', this.magnitude);
     if (this.derivative !== 0) {
       // Change the magnitude based on the derivative integer value, e.g. magnitude
       // of 'max' becomes '+' if derivative is '-' because derivative integer is -1.
       const magnitudeIdx = this.space.numeric.findIndex((e) => e === this.magnitude);
       const newMagnitudeIdx = Math.max(0, Math.min(this.space.numeric.length-1, magnitudeIdx + this.derivative));
       magnitude = this.space.numeric[newMagnitudeIdx];
-      console.log(magnitudeIdx, 'new magnitude idx', newMagnitudeIdx, magnitude);
     }
     return [{
       magnitude,
-      derivative: this.derivative,
+      // If magnitude is maximum, the derivative is capped.
+      derivative: this.getValidDerivative(this.derivative, magnitude),
       space: this.space,
       dependencies: this.dependencies,
     }, `changed magnitude of ${name} based on derivative`];
@@ -129,9 +128,20 @@ class Quantity {
     return nextStates;
   }
 
-  getValidDerivative(derivative) {
+  getValidDerivative(derivative, magnitude) {
+    console.log('derivative', derivative, magnitude, this.getSpaceLabel(magnitude));
+    if (
+      this.getSpaceLabel(magnitude) === 'max' && derivative === 1 ||
+      this.getSpaceLabel(magnitude) === '0' && derivative === -1
+    ) {
+      return 0;
+    }
     // Force the derivative to be a value between -1 and 1.
     return Math.min(1, Math.max(-1, derivative));
+  }
+
+  getValidDerivativeFromQuantity(quantityName, derivative, magnitude) {
+    return this.state.quantities[quantityName].getValidDerivative(derivative, magnitude);
   }
 
   positiveInfluence(nextStates, [ quantityName, dependentQuantityName ]) {
@@ -139,7 +149,11 @@ class Quantity {
       const nextState = nextStates[idx];
       if (nextState.quantities[quantityName].magnitude > 0) {
         const derivative = nextState.quantities[dependentQuantityName].derivative;
-        nextState.quantities[dependentQuantityName].derivative = this.getValidDerivative(derivative + 1);
+        nextState.quantities[dependentQuantityName].derivative = this.getValidDerivativeFromQuantity(
+          dependentQuantityName,
+          derivative + 1,
+          nextState.quantities[dependentQuantityName].magnitude,
+        );
         nextState.log.push(`positive influence from ${quantityName} to ${dependentQuantityName}`);
       }
     }
@@ -151,32 +165,42 @@ class Quantity {
       const nextState = nextStates[idx];
       if (nextState.quantities[quantityName].derivative > 0) {
         const derivative = nextState.quantities[dependentQuantityName].derivative;
-        nextState.quantities[dependentQuantityName].derivative = this.getValidDerivative(derivative + 1);
+        nextState.quantities[dependentQuantityName].derivative = this.getValidDerivativeFromQuantity(
+          dependentQuantityName,
+          derivative + 1,
+          nextState.quantities[dependentQuantityName].magnitude,
+        );
         nextState.log.push(`positive proportional from ${quantityName} to ${dependentQuantityName}`);
       }
     }
-    return nextStates;
+    return this.state.quantities[dependentQuantityName].propagate(nextStates);
   }
 
   negativeInfluence(nextStates, [ quantityName, dependentQuantityName ]) {
-    const result = nextStates;
+    const result = [ ...nextStates ];
+    console.log('NEGATIVE INFLUENCE');
     for (const idx in nextStates) {
       const nextState = nextStates[idx];
       const affectedDerivative = nextState.quantities[dependentQuantityName].derivative;
+      const affectedDerivativeNew = this.getValidDerivativeFromQuantity(
+        dependentQuantityName,
+        affectedDerivative - 1,
+        nextState.quantities[dependentQuantityName].magnitude,  
+      );
       // Only add another state if the magnitude of the originating quantity is greater than zero,
       // and the affected quantity derivative-1 is not the same as it already is,
       // e.g. in the case of an original derivative of -1, it will stay -1, so we do not add
       // another state.
       if (
         nextState.quantities[quantityName].magnitude > 0 &&
-        this.getValidDerivative(affectedDerivative - 1) !== affectedDerivative
+        affectedDerivativeNew !== affectedDerivative
       ) {
         result.push({
           quantities: {
             ...nextState.quantities,
             [dependentQuantityName]: {
               ...nextState.quantities[dependentQuantityName],
-              derivative: this.getValidDerivative(affectedDerivative - 1),
+              derivative: affectedDerivativeNew,
             },
           },
           log: [
@@ -186,7 +210,7 @@ class Quantity {
         });
       }
     }
-    return nextStates;
+    return result;
   }
 
   /**
@@ -199,6 +223,17 @@ class Quantity {
     }
     const idx = this.space.labels.findIndex((e) => e === label);
     return this.space.numeric[idx];
+  }
+
+  /**
+   * Returns the string/label value for a given magnitude integer.
+   */
+  getSpaceLabel(numeric) {
+    if (!Number.isInteger(numeric)) {
+      return numeric;
+    }
+    const idx = this.space.numeric.findIndex((e) => e === numeric);
+    return this.space.labels[idx];
   }
 }
 

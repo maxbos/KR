@@ -69,21 +69,18 @@ class State {
       baseState.quantities[quantityName] = status;
       baseState.log.push(log);
     }
-    console.log(baseState);
     // Perform value constraints.
     for (const quantityName in baseState.quantities) {
       baseState = this.quantities[quantityName].valueConstraint(baseState);
     }
     // Second, propagate the state value changes from performing the logical
     // consequences through the entire system.
-    const nextStates = this.quantities['Inflow'].propagate([baseState]);
-    console.log(nextStates);
+    const nextStates = this.quantities['Inflow'].propagate([{ ...baseState }]);
     // Generate an Array of { state, parentId } pairs.
     const result = [];
     for (const idx in nextStates) {
       result.push({ stateValue: nextStates[idx], parentId: this.id });
     }
-    console.log(result);
     return result;
   }
 }
