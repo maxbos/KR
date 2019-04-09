@@ -33,17 +33,19 @@ class World {
    */
   newState(stateValue) {
     const quantities = {};
-    for (const quantityName in stateValue) {
-      quantities[quantityName] = new Quantity(stateValue[quantityName]);
+    for (const quantityName in stateValue.quantities) {
+      quantities[quantityName] = new Quantity(stateValue.quantities[quantityName]);
     }
-    return new State(this.nextId(), quantities);
+    return new State(this.nextId(), quantities, stateValue.log);
   }
 
   setupInitialState() {
     const state = this.newState({
-      'Inflow': INFLOW,
-      'Volume': VOLUME,
-      'Outflow': OUTFLOW,
+      quantities: {
+        'Inflow': INFLOW,
+        'Volume': VOLUME,
+        'Outflow': OUTFLOW,
+      },
     });
     state.setQuantityDependency('positiveInfluence', 'Inflow', 'Volume');
     state.setQuantityDependency('negativeInfluence', 'Outflow', 'Volume');
@@ -56,26 +58,36 @@ class World {
   init() {
     const rootState = this.setupInitialState();
     this.stateTree.addState(rootState);
+    console.log(this.stateTree);
     rootState.setNextQuantityState('Inflow', 'derivative', 1);
     let currentTreeLevel = new TreeLevel(rootState.next());
+    let count = 0;
     while (!currentTreeLevel.isEmpty()) {
       const nextTreeLevel = new TreeLevel();
       const currentTree = currentTreeLevel.get();
       for (const idx in currentTree) {
-        const [stateValue, parentIds] = currentTree[idx];
-        const state = this.newState(stateValue);
-        // Add the current state as a free node (not yet any connections) to
-        // the state-tree.
-        this.stateTree.addState(state);
+        console.log('!!!CONSIDERING NEW NODE IN TREE LEVEL!!!');
+        const { stateValue, parentId } = currentTree[idx];
+        // If the state tree does not yet contain this state value,
+        // we want to add this state,
+        let stateId = this.stateTree.findStateId(stateValue);
+        if (stateId === -1) {
+          const state = this.newState(stateValue);
+          stateId = state.id;
+          // Add the current state as a free node (not yet any connections) to
+          // the state-tree.
+          this.stateTree.addState(state);
+          // Merge the state values that follow from the current state into the
+          // next tree level.
+          nextTreeLevel.add(state.next());
+        }
         // Add the parent-child connection to each parent state that is included
         // in the `parentIds` list.
-        this.stateTree.addConnections(parentIds, state.getId());
-        // Merge the state values that follow from the current state into the
-        // next tree level.
-        nextTreeLevel.add(state.next());
+        this.stateTree.addConnection(parentId, stateId);
       }
       console.log(nextTreeLevel);
-      break;
+      count++;
+      if (count > 6) { break; }
       currentTreeLevel = nextTreeLevel;
     }
   }

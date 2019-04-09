@@ -5,6 +5,7 @@ class StateTree {
    */
   constructor(state) {
     this.states = {};
+    this.stringStates = [];
     if (state) {
       this.addState(state);
     }
@@ -15,7 +16,32 @@ class StateTree {
    * @param {State} state 
    */
   addState(state) {
-    this.states[state.getId()] = state;
+    this.states[state.id] = state;
+    this.stringStates.push(this.toStringState(state));
+  }
+
+  /**
+   * 
+   * @param {*} state can be either an Object of state value or a State instance
+   */
+  toStringState(state) {
+    let text = '';
+    const quantities = state.quantities;
+    for (const name in quantities) {
+      text += `m:${quantities[name].magnitude},d:${quantities[name].derivative};`;
+    }
+    return text;
+  }
+
+  /**
+   * Tries to find the given state within the current state tree.
+   * If found, it returns the ID for the found state, otherwise, returns -1.
+   * @param {*} state can be either an Object of state value or a State instance
+   */
+  findStateId(state) {
+    const targetStateString = this.toStringState(state);
+    const foundState = this.stringStates.find((s) => s === targetStateString);
+    return foundState ? foundState.id : -1;
   }
   
   /**

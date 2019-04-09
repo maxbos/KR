@@ -3,18 +3,21 @@ import merge from 'lodash/merge';
 class TreeLevel {
   /**
    * 
-   * @param {Array} stateValues mapping of stateValues and parent State IDs
+   * @param {Array} stateValues Array of Objects containing (1) state value object and (2) parent state ID
    */
-  constructor(stateValues) {
+  constructor(stateValues = []) {
     this.stateValues = stateValues;
   }
 
   /**
    * For each state value that already exists, merge the connections.
-   * @param {Array} stateValues mapping of stateValues and parent State IDs
+   * @param {Array} stateValues Array of Objects containing (1) state value object and (2) parent state ID
    */
   add(stateValues) {
-    this.stateValues = merge(this.stateValues, stateValues);
+    this.stateValues = [
+      ...this.stateValues,
+      ...stateValues,
+    ];
   }
   
   /**
@@ -28,7 +31,7 @@ class TreeLevel {
    * @returns whether the tree level contains state values
    */
   isEmpty() {
-    return !Object.keys(this.stateValues).length;
+    return this.stateValues.length === 0;
   }
 }
 

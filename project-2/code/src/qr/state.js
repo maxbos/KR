@@ -6,10 +6,11 @@ class State {
    * @param {Number} id
    * @param {Array} value
    */
-  constructor(id, quantities) {
+  constructor(id, quantities, log) {
     this.id = id;
     this.quantities = quantities;
     this.childIds = [];
+    this.log = log;
     for (const q in this.quantities) {
       this.quantities[q].state = this;
     }
@@ -37,12 +38,7 @@ class State {
    * @param {String} value new value for the quantity type
    */
   setNextQuantityState(quantityName, quantityType, quantityValue) {
-    this.quantities[quantityName].receive(quantityType, quantityValue, {
-      cause: 'exogenousAction',
-      quantityName,
-      quantityType,
-      quantityValue,
-    });
+    this.quantities[quantityName].enableDerivative();
   }
 
   /**
@@ -74,27 +70,27 @@ class State {
    * @returns an Array of Objects, each Object containing values for a
    * full potential State
    */
-  generateNextStateCombinations() {
-    const nextStates = [];
-    while (true) {
-      const nextState = {};
-      for (const quantityName in this.quantities) {
-        console.log('get next state for ' + quantityName);
-        nextState[quantityName] = this.quantities[quantityName].getNextState();
-      }
-      // If the new state is equal to the previous generated state,
-      // it means that all possible combinations are generated, so
-      // we stop the state combination generation.
-      if (isEqual(nextState, nextStates[nextStates.length - 1])) {
-        break;
-      }
-      nextStates.push([nextState, [this.id]]);
-      break;
-    }
-    this.nextStates = nextStates;
-    console.log(nextStates);
-    return nextStates;
-  }
+  // generateNextStateCombinations() {
+  //   const nextStates = [];
+  //   while (true) {
+  //     const nextState = {};
+  //     for (const quantityName in this.quantities) {
+  //       console.log('get next state for ' + quantityName);
+  //       nextState[quantityName] = this.quantities[quantityName].getNextState();
+  //     }
+  //     // If the new state is equal to the previous generated state,
+  //     // it means that all possible combinations are generated, so
+  //     // we stop the state combination generation.
+  //     if (isEqual(nextState, nextStates[nextStates.length - 1])) {
+  //       break;
+  //     }
+  //     nextStates.push([nextState, [this.id]]);
+  //     break;
+  //   }
+  //   this.nextStates = nextStates;
+  //   console.log(nextStates);
+  //   return nextStates;
+  // }
 
   /**
    * Generates next states for the current state, by first checking for
@@ -108,15 +104,31 @@ class State {
   next() {
     // First check all quantities for logical consequences from the current quantity
     // state values, e.g. setting magnitude from '0' to '+' if derivative is '+'.
+    let baseState = { quantities: {}, log: [] };
     for (const quantityName in this.quantities) {
-      this.quantities[quantityName].logicalConsequence();
+      const [status, log] = this.quantities[quantityName].processDerivative(quantityName);
+      baseState.quantities[quantityName] = status;
+      baseState.log.push(log);
     }
-    console.log(this.quantities);
+    console.log(baseState);
+    // Perform value constraints.
+    for (const quantityName in baseState.quantities) {
+      baseState = this.quantities[quantityName].valueConstraint(baseState);
+    }
+    // console.log(this.quantities);
     // Second, propagate the state value changes from performing the logical
     // consequences through the entire system.
-    this.quantities['Inflow'].propagate();
-    // Lastly, get the combinations of quantities.
-    return this.generateNextStateCombinations();
+    const nextStates = this.quantities['Inflow'].propagate([baseState]);
+    console.log(nextStates);
+    // // Lastly, get the combinations of quantities.
+    // return this.generateNextStateCombinations(nextStates);
+    // Generate an Array of { state, parentId } pairs.
+    const result = [];
+    for (const idx in nextStates) {
+      result.push({ stateValue: nextStates[idx], parentId: this.id });
+    }
+    console.log(result);
+    return result;
   }
 }
 
