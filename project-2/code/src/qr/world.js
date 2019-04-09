@@ -84,10 +84,10 @@ class World {
         // in the `parentIds` list.
         this.stateTree.addConnection(parentId, stateId);
         count++;
-        // if (count > 12) { break; }
+        // if (count > 0) { break; }
       }
       console.log(nextTreeLevel);
-      // if (count > 12) { break; }
+      // if (count > 0) { break; }
       currentTreeLevel = nextTreeLevel;
     }
   }

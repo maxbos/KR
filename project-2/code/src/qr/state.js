@@ -28,6 +28,7 @@ class State {
    * @param {Number} childId 
    */
   addChildConnection(childId) {
+    if (this.childIds.includes(childId)) return;
     this.childIds.push(childId);
   }
 

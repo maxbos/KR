@@ -50,6 +50,7 @@ class StateTree {
    * @param {Number} childId 
    */
   addConnection(parentId, childId) {
+    if (parentId === childId) return;
     this.states[parentId].addChildConnection(childId);
   }
 
