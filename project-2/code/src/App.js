@@ -11,7 +11,6 @@ class App extends Component {
       states: new World().stateTree.states,
       animateStates: false,
     };
-    console.log(this.state.states);
     this.handleInputChange = this.handleInputChange.bind(this);
   }
 
@@ -134,11 +133,16 @@ class App extends Component {
     }
   }
 
-  componentDidUpdate() {
-    this.renderDots(!this.state.animateStates);
+  shouldComponentUpdate(nextProps, nextState) {
+    this.renderDots(nextState.animateStates);
+    return true;
   }
 
   componentDidMount() {
+    this.renderDots(this.state.animateStates);
+  }
+
+  componentDidUpdate() {
     this.renderDots(this.state.animateStates);
   }
 
@@ -147,7 +151,6 @@ class App extends Component {
       [event.target.name]: event.target.checked
     });
   }
-  
 
   render() {
     return (
@@ -157,7 +160,7 @@ class App extends Component {
           <input name="animateStates" type="checkbox" value={this.state.animateStates} onChange={this.handleInputChange}/>
           ⬅️(the first two clicks are not registered due to a bug)
         </form>
-        <div id="graph"  style={{textAlign: "center"}} />
+        <div id="graph" style={{textAlign: "center"}} />
       </div>
     );
   }
