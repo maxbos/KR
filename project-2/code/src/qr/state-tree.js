@@ -41,7 +41,7 @@ class StateTree {
   findStateId(state) {
     const targetStateString = this.toStringState(state);
     const foundStateId = this.stringStates[targetStateString];
-    return foundStateId || -1;
+    return (foundStateId >= 0) ? foundStateId : -1;
   }
   
   /**
