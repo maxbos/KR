@@ -34,20 +34,20 @@ class App extends Component {
 
       for (let idx in types)  {
         let type = types[idx];
-        let maxValue = (type === 'Volume' || type === 'Outflow') ? '+\n' : '';
         if (state.quantities[type].derivative === '+') {
           dot.push(type.toLowerCase() + 'derivative [label="Derivative:\n➡️+\n0\n-" shape=box fillcolor="#BB8FCE"]');
         } else if (state.quantities[type].derivative === '0') {
-          dot.push(`${type.toLowerCase()}derivative [label="Derivative:\n${maxValue}➡️0\n-" shape=box fillcolor="#BB8FCE"]`)
+          dot.push(`${type.toLowerCase()}derivative [label="Derivative:\n+\n➡️0\n-" shape=box fillcolor="#BB8FCE"]`)
         } else if (state.quantities[type].derivative === '-') {
-          dot.push(`${type.toLowerCase()}derivative [label="Derivative:\n${maxValue}0\n➡️-" shape=box fillcolor="#BB8FCE"]`)
+          dot.push(`${type.toLowerCase()}derivative [label="Derivative:\n+\n0\n➡️-" shape=box fillcolor="#BB8FCE"]`)
         }
+        let maxValue = (type === 'Volume' || type === 'Outflow') ? 'max\n' : '';
         if (state.quantities[type].magnitude === 'max') {
           dot.push(type.toLowerCase() + 'magnitude [label="Magnitude:\n➡️max\n+\n0" shape=box fillcolor="#FAAC58"]')
         } else if (state.quantities[type].magnitude === '+') {
-          dot.push(type.toLowerCase() + 'magnitude [label="Magnitude:\nmax\n➡️+\n0" shape=box fillcolor="#FAAC58"]')
+          dot.push(type.toLowerCase() + `magnitude [label="Magnitude:\n${maxValue}➡️+\n0" shape=box fillcolor="#FAAC58"]`)
         } else if (state.quantities[type].magnitude === '0') {
-          dot.push(type.toLowerCase() + 'magnitude [label="Magnitude:\nmax\n+\n➡️0" shape=box fillcolor="#FAAC58"]')
+          dot.push(type.toLowerCase() + `magnitude [label="Magnitude:\n${maxValue}+\n➡️0" shape=box fillcolor="#FAAC58"]`)
         }
       }
       dot.push(
@@ -66,6 +66,7 @@ class App extends Component {
       '    ',
       '}' );
       dots.push(dot);
+      // break;
     }
     return dots;
   }
