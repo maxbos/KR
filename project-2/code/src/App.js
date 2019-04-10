@@ -89,7 +89,10 @@ class App extends Component {
       );
       for (let child in state.childIds) {
         let childId = state.childIds[child];
-        connections.push(`state${stateId} -> state${childId}\n`);
+        connections.push(`state${stateId} -> state${childId} [label=<
+          <table style="font-size:80%" border="0" cellborder="1" cellspacing="0">
+            <tr><td bgcolor="yellow"><font POINT-SIZE="8">testst</font></td></tr>
+          </table>>]\n`);
       }
     }
     dot.push(...connections);
