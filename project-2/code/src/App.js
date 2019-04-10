@@ -8,7 +8,7 @@ class App extends Component {
   constructor(props) {
     super(props);
     this.state = {
-      states: new World().stateTree.states,
+      states: this.convertMagnitudesAndDerivatives(new World().stateTree.states),
       animateStates: false,
     };
     this.handleInputChange = this.handleInputChange.bind(this);
@@ -20,6 +20,7 @@ class App extends Component {
     let dots = []
     for (let stateId in states) {
       let state = states[stateId];
+      let log = state.log ? state.log.join("\n") : "Initial state"; 
       let dot = []
       dot.push('digraph  {',
       '    node [style="filled"]',
@@ -29,7 +30,7 @@ class App extends Component {
       '    inflow [label="Inflow🚰"]',
       '    volume [label="Volume🛁"]',
       '    outflow [label="Outflow🌊"]',
-      '    explanation [label="Explanation:\n Something happened" shape=box fillcolor="#FFFFFF"]');
+      '    explanation [label="Explanation:\n'+ log + '" shape=box fillcolor="#FFFFFF"]');
 
       for (let idx in types)  {
         let type = types[idx];
@@ -77,7 +78,7 @@ class App extends Component {
       'digraph  {',
       'node [style="filled"]');
     for (let stateId in states) {
-      let state = this.convertMagnitudesAndDerivatives(states[stateId]);
+      let state = states[stateId];
       let inflow = state.quantities['Inflow'].magnitude;
       let dInflow = state.quantities['Inflow'].derivative;
       let volume = state.quantities['Volume'].magnitude;
@@ -101,16 +102,19 @@ class App extends Component {
     return [dot];
   }
 
-  convertMagnitudesAndDerivatives(state) {
-    let types = ['Inflow', 'Volume', 'Outflow']
-    for (let idx in types)  {
-      let type = types[idx];
-      let mag = state.quantities[type].magnitude;
-      let der = state.quantities[type].derivative;
-      state.quantities[type].magnitude = mag === 1 ? '+' : mag === 2 ? 'max' : mag;
-      state.quantities[type].derivative = der === -1 ? '-' : der === 0 ? '0' : '+';
+  convertMagnitudesAndDerivatives(states) {
+    for (let stateId in states) {
+      let state = states[stateId];
+      let types = ['Inflow', 'Volume', 'Outflow']
+      for (let idx in types)  {
+        let type = types[idx];
+        let mag = state.quantities[type].magnitude;
+        let der = state.quantities[type].derivative;
+        state.quantities[type].magnitude = mag === 1 ? '+' : mag === 2 ? 'max' : mag.toString();
+        state.quantities[type].derivative = der === -1 ? '0' : der === 0 ? '+' : 'max';
+      }
     }
-    return state
+    return states
   }
 
   renderDots(animateStates) {
@@ -120,7 +124,7 @@ class App extends Component {
         .transition(function () {
             return d3.transition("main")
                 .ease(d3.easeLinear)
-                .delay(100)
+                .delay(5000)
                 .duration(500);
         })
         .on("initEnd", render);
@@ -161,7 +165,6 @@ class App extends Component {
         <form>
           <label>Animate states</label>
           <input name="animateStates" type="checkbox" value={this.state.animateStates} onChange={this.handleInputChange}/>
-          ⬅️(the first two clicks are not registered due to a bug)
         </form>
         <div id="graph" style={{textAlign: "center"}} />
       </div>
