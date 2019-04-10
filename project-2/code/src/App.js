@@ -91,8 +91,8 @@ class App extends Component {
         let childId = state.childIds[child];
         let log = states[childId].log;
         connections.push(`state${stateId} -> state${childId} [label=<
-          <table style="font-size:80%" border="0" cellborder="1" cellspacing="0">
-            <tr><td bgcolor="yellow"><font POINT-SIZE="8">${log.join('\n')}</font></td></tr>
+          <table width="200" border="0" cellborder="1" cellspacing="0">
+            <tr><td bgcolor="#FAAC58"><font POINT-SIZE="8">${log.join('<br />')}</font></td></tr>
           </table>>]\n`);
       }
     }
