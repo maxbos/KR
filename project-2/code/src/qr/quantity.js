@@ -14,6 +14,7 @@ class Quantity {
     this.derivative = derivative;
     this.dependencies = dependencies;
     this.forcedNextState = null;
+    this.propagateCount = 0;
   }
 
   /**
@@ -119,6 +120,7 @@ class Quantity {
 
   propagate(nextStates) {
     console.log('propagate', nextStates);
+    this.propagateCount++;
     // Perform each non-vc dependency.
     for (const idx in this.dependencies) {
       const dep = this.dependencies[idx];
@@ -182,6 +184,9 @@ class Quantity {
   }
 
   negativeInfluence(nextStates, [ quantityName, dependentQuantityName ]) {
+    if (this.propagateCount > 1) {
+      return this.capResult(nextStates);
+    }
     const result = [ ...nextStates ];
     console.log('NEGATIVE INFLUENCE');
     let changed = false;
@@ -220,7 +225,7 @@ class Quantity {
     }
     console.log(changed);
     // return this.capResult(result);
-    if (!changed || result.length > 2) {
+    if (!changed) {
       return this.capResult(result);
     }
     // return this.capResult(result);
