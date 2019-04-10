@@ -10,10 +10,22 @@ class State {
     this.id = id;
     this.quantities = quantities;
     this.childIds = [];
-    this.log = log;
+    this.log = this.cleanLogs(log);
     for (const q in this.quantities) {
       this.quantities[q].state = this;
     }
+  }
+
+  cleanLogs(log) {
+    const newLog = [];
+    let prevl;
+    for (const idx in log) {
+      const l = log[idx];
+      if (l === prevl) continue;
+      newLog.push(l);
+      prevl = l;
+    }
+    return newLog;
   }
 
   /**
