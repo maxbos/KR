@@ -1,3 +1,5 @@
+import cloneDeep from 'lodash/cloneDeep';
+
 const DERIVATIVE_SPACE = ['-', '0', '+'];
 const DERIVATIVE_SPACE_INT = [-1, 0, 1];
 
@@ -82,7 +84,7 @@ class Quantity {
             },
             log: [
               ...baseState.log,
-              `performed value constraint, set ${dependentQuantityName} to ${dependentValue} because ${quantityName} is ${quantityValue}`,
+              `VC: set ${dependentQuantityName} to ${dependentValue} because ${quantityName} is ${quantityValue}`,
             ],
           };
         }
@@ -121,13 +123,18 @@ class Quantity {
     for (const idx in nextStates) {
       const nextState = nextStates[idx];
       if (nextState.quantities[quantityName].magnitude > 0) {
+        const oldDerivative = nextState.quantities[dependentQuantityName].derivative;
         const derivative = nextState.quantities[dependentQuantityName].derivative;
         nextState.quantities[dependentQuantityName].derivative = this.getValidDerivativeFromQuantity(
           dependentQuantityName,
           derivative + 1,
           nextState.quantities[dependentQuantityName].magnitude,
         );
-        nextState.log.push(`I+: ${quantityName} &#62; 0, so set ∂${dependentQuantityName} to ${
+        nextState.log.push(`I+: ${quantityName} &#62; 0, so set ∂${dependentQuantityName} from ${
+          this.state.quantities[dependentQuantityName].getDerivativeLabel(
+            oldDerivative
+          )
+        } to ${
           this.state.quantities[dependentQuantityName].getDerivativeLabel(
             nextState.quantities[dependentQuantityName].derivative
           )
@@ -145,6 +152,7 @@ class Quantity {
         nextState.quantities[quantityName].derivative < 0
       ) {
         const increment = nextState.quantities[quantityName].derivative > 0 ? 1 : -1;
+        const oldDerivative = nextState.quantities[dependentQuantityName].derivative;
         const derivative = nextState.quantities[dependentQuantityName].derivative;
         nextState.quantities[dependentQuantityName].derivative = this.getValidDerivativeFromQuantity(
           dependentQuantityName,
@@ -152,7 +160,11 @@ class Quantity {
           nextState.quantities[dependentQuantityName].magnitude,
         );
         const sign = increment === 1 ? '&#62;' : '&#60;';
-        nextState.log.push(`P+: ∂${quantityName} ${sign} 0, so set ∂${dependentQuantityName} to ${
+        nextState.log.push(`P+: ∂${quantityName} ${sign} 0, so set ∂${dependentQuantityName} from ${
+          this.state.quantities[dependentQuantityName].getDerivativeLabel(
+            oldDerivative
+          )
+        } to ${
           this.state.quantities[dependentQuantityName].getDerivativeLabel(
             nextState.quantities[dependentQuantityName].derivative
           )
@@ -180,6 +192,7 @@ class Quantity {
       // and the affected quantity derivative-1 is not the same as it already is,
       // e.g. in the case of an original derivative of -1, it will stay -1, so we do not add
       // another state.
+      console.log(affectedDerivativeNew, affectedDerivative, affectedDerivativeNew !== affectedDerivative);
       if (
         nextState.quantities[quantityName].magnitude > 0 &&
         affectedDerivativeNew !== affectedDerivative
@@ -194,7 +207,11 @@ class Quantity {
           },
           log: [
             ...nextState.log,
-            `I-: ${quantityName} &#62; 0, so set to ∂${dependentQuantityName} to ${
+            `I-: ${quantityName} &#62; 0, so set ∂${dependentQuantityName} from ${
+              this.state.quantities[dependentQuantityName].getDerivativeLabel(
+                affectedDerivative
+              )
+            } to ${
               this.state.quantities[dependentQuantityName].getDerivativeLabel(
                 affectedDerivativeNew
               )
@@ -220,6 +237,24 @@ class Quantity {
           result[idx].quantities[quantityName].magnitude,
         );
       }
+    }
+    return this.tapCurve(result);
+  }
+
+  tapCurve(r) {
+    const result = [...r];
+    for (const idx in r) {
+      const state = r[idx];
+      if (state.quantities['Inflow'].derivative === 1) {
+        const copy = cloneDeep(state);
+        copy.quantities['Inflow'].derivative = 0;
+        result.push(copy);
+      }
+      // if (state.quantities['Inflow'].derivative === 0) {
+      //   const copy = cloneDeep(state);
+      //   copy.quantities['Inflow'].derivative = -1;
+      //   result.push(copy);
+      // }
     }
     return result;
   }

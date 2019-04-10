@@ -132,7 +132,9 @@ class App extends Component {
 
     var dots = animateStates ? this.getAnimatedDots() : this.getRegularDots();
     var dotIndex = 0;
-    var graphviz = d3.select("#graph").graphviz()
+    var graphviz = d3.select("#graph").graphviz({
+      totalMemory: 1073741824,
+    })
         .transition(function () {
           return d3.transition("main")
               .ease(d3.easeLinear)
