@@ -11,6 +11,7 @@ class App extends Component {
       states: this.convertMagnitudesAndDerivatives(new World().stateTree.states),
       animateStates: true,
     };
+    console.log(this.state.states);
     this.handleInputChange = this.handleInputChange.bind(this);
   }
 
@@ -132,9 +133,8 @@ class App extends Component {
       dot.push(
         `state${stateId} [label="${stateId}\nInflow: ${inflow}\t\t∂Inflow: ${dInflow}\nVolume: ${volume}\t\t∂Volume: ${dVolume}\nOutflow: ${outflow}\t\t∂Outflow: ${dOutflow}"]\n`
       );
-      for (let child in state.childIds) {
-        let childId = state.childIds[child];
-        let log = states[childId].log;
+      for (let idx in state.children) {
+        let [childId, log] = state.children[idx];
         connections.push(`state${stateId} -> state${childId} [label=<
           <table width="200" border="0" cellborder="1" cellspacing="0">
             <tr><td bgcolor="#FAAC58"><font POINT-SIZE="8">${log.join('<br />')}</font></td></tr>
@@ -143,6 +143,7 @@ class App extends Component {
     }
     dot.push(...connections);
     dot.push('}');
+    console.log(JSON.stringify(dot.join('\n')));
     return [dot];
   }
 
@@ -176,7 +177,8 @@ class App extends Component {
 
     var dots = animateStates ? this.getAnimatedDots() : this.getRegularDots();
     var dotIndex = 0;
-    var graphviz = d3.select("#graph").graphviz({
+    const div = d3.select("#graph");
+    var graphviz = div.graphviz({
       totalMemory: 1073741824,
     })
         .transition(function () {

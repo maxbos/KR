@@ -60,7 +60,7 @@ class World {
     this.stateTree.addState(rootState);
     rootState.setNextQuantityState('Inflow', 'derivative', 1);
     let currentTreeLevel = new TreeLevel(rootState.next());
-    let count = 0;
+    // let count = 0;
     while (!currentTreeLevel.isEmpty()) {
       const nextTreeLevel = new TreeLevel();
       const currentTree = currentTreeLevel.get();
@@ -81,11 +81,11 @@ class World {
         }
         // Add the parent-child connection to each parent state that is included
         // in the `parentIds` list.
-        this.stateTree.addConnection(parentId, stateId);
-        count++;
-        // if (count > 3) break;
+        this.stateTree.addConnection(parentId, [stateId, stateValue.log]);
+        // count++;
+        // if (count > 8) break;
       }
-      // if (count > 3) break;
+      // if (count > 8) break;
       currentTreeLevel = nextTreeLevel;
     }
   }

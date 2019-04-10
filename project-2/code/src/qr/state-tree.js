@@ -41,17 +41,17 @@ class StateTree {
   findStateId(state) {
     const targetStateString = this.toStringState(state);
     const foundStateId = this.stringStates[targetStateString];
-    return foundStateId || -1;
+    return (foundStateId >= 0) ? foundStateId : -1;
   }
   
   /**
    * 
    * @param {Number} parentId 
-   * @param {Number} childId 
+   * @param {Array} child tuple containing childId and log 
    */
-  addConnection(parentId, childId) {
+  addConnection(parentId, [childId, log]) {
     if (parentId === childId) return;
-    this.states[parentId].addChildConnection(childId);
+    this.states[parentId].addChildConnection([childId, log]);
   }
 
   /**

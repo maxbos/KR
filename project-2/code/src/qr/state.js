@@ -1,5 +1,3 @@
-import isEqual from 'lodash/isEqual';
-
 class State {
   /**
    * 
@@ -10,6 +8,7 @@ class State {
     this.id = id;
     this.quantities = quantities;
     this.childIds = [];
+    this.children = [];
     this.log = this.cleanLogs(log);
     for (const q in this.quantities) {
       this.quantities[q].state = this;
@@ -37,11 +36,12 @@ class State {
 
   /**
    * 
-   * @param {Number} childId 
+   * @param {Array} child 
    */
-  addChildConnection(childId) {
-    if (this.childIds.includes(childId)) return;
-    this.childIds.push(childId);
+  addChildConnection([childId, log]) {
+    // if (this.childIds.includes(childId)) return;
+    // this.childIds.push(childId);
+    this.children.push([childId, log]);
   }
 
   /**
@@ -85,12 +85,13 @@ class State {
       }
     }
     // Perform value constraints.
+    let baseStateAfterVC = { ...baseState };
     for (const quantityName in baseState.quantities) {
-      baseState = this.quantities[quantityName].valueConstraint(baseState);
+      baseStateAfterVC = this.quantities[quantityName].valueConstraint(baseStateAfterVC);
     }
     // Second, propagate the state value changes from performing the logical
     // consequences through the entire system.
-    const nextStates = this.quantities['Inflow'].propagate([{ ...baseState }]);
+    const nextStates = this.quantities['Inflow'].propagate([{ ...baseStateAfterVC }]);
     // Generate an Array of { state, parentId } pairs.
     const result = [];
     for (const idx in nextStates) {

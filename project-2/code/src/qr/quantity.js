@@ -66,6 +66,7 @@ class Quantity {
    * quantity. Otherwise, return the current set of base states.
    */
   valueConstraint(baseState) {
+    const result = {...baseState};
     for (let i = 0; i < this.dependencies.length; i++) {
       const dep = this.dependencies[i];
       if (dep[0] === 'valueConstraint') {
@@ -73,41 +74,42 @@ class Quantity {
         // If this quantity contains a value constraint, perform that constraint.
         // So get the value from quantity, if that value is equal to the conditional value,
         // set the dependent quantity to the dependent value.
-        if (baseState.quantities[quantityName].magnitude === this.getSpaceNumeric(quantityValue)) {
+        if (result.quantities[quantityName].magnitude === this.getSpaceNumeric(quantityValue)) {
           return {
             quantities: {
-              ...baseState.quantities,
+              ...result.quantities,
               [dependentQuantityName]: {
-                ...baseState.quantities[dependentQuantityName],
+                ...result.quantities[dependentQuantityName],
                 magnitude: this.getSpaceNumeric(dependentValue),
               },
             },
             log: [
-              ...baseState.log,
+              ...result.log,
               `VC: set ${dependentQuantityName} to ${dependentValue} because ${quantityName} is ${quantityValue}`,
             ],
           };
         }
       }
     }
-    return baseState;
+    return result;
   }
 
   propagate(nextStates) {
     this.propagateCount++;
+    let result = [...nextStates];
     // Perform each non-vc dependency.
     for (const idx in this.dependencies) {
       const dep = this.dependencies[idx];
       if (dep[0] === 'valueConstraint') continue;
-      nextStates = this[dep[0]](nextStates, dep[1]);
+      result = this[dep[0]]([...result], dep[1]);
     }
-    return nextStates;
+    return result;
   }
 
   getValidDerivative(derivative, magnitude) {
     if (
-      this.getSpaceLabel(magnitude) === 'max' && derivative === 1 ||
-      this.getSpaceLabel(magnitude) === '0' && derivative === -1
+      (this.getSpaceLabel(magnitude) === 'max' && derivative === 1) ||
+      (this.getSpaceLabel(magnitude) === '0' && derivative === -1)
     ) {
       return 0;
     }
@@ -120,8 +122,9 @@ class Quantity {
   }
 
   positiveInfluence(nextStates, [ quantityName, dependentQuantityName ]) {
+    let result = [...nextStates];
     for (const idx in nextStates) {
-      const nextState = nextStates[idx];
+      const nextState = result[idx];
       if (nextState.quantities[quantityName].magnitude > 0) {
         const oldDerivative = nextState.quantities[dependentQuantityName].derivative;
         const derivative = nextState.quantities[dependentQuantityName].derivative;
@@ -141,12 +144,13 @@ class Quantity {
         }`);
       }
     }
-    return this.state.quantities[dependentQuantityName].propagate(nextStates);
+    return this.state.quantities[dependentQuantityName].propagate(result);
   }
 
   positiveProportional(nextStates, [ quantityName, dependentQuantityName ]) {
+    let result = [...nextStates];
     for (const idx in nextStates) {
-      const nextState = nextStates[idx];
+      const nextState = result[idx];
       if (
         nextState.quantities[quantityName].derivative > 0 ||
         nextState.quantities[quantityName].derivative < 0
@@ -171,7 +175,7 @@ class Quantity {
         }`);
       }
     }
-    return this.state.quantities[dependentQuantityName].propagate(nextStates);
+    return this.state.quantities[dependentQuantityName].propagate(result);
   }
 
   negativeInfluence(nextStates, [ quantityName, dependentQuantityName ]) {
@@ -192,7 +196,6 @@ class Quantity {
       // and the affected quantity derivative-1 is not the same as it already is,
       // e.g. in the case of an original derivative of -1, it will stay -1, so we do not add
       // another state.
-      console.log(affectedDerivativeNew, affectedDerivative, affectedDerivativeNew !== affectedDerivative);
       if (
         nextState.quantities[quantityName].magnitude > 0 &&
         affectedDerivativeNew !== affectedDerivative
