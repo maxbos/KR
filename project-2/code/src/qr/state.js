@@ -68,7 +68,9 @@ class State {
     for (const quantityName in this.quantities) {
       const [status, log] = this.quantities[quantityName].processDerivative(quantityName);
       baseState.quantities[quantityName] = status;
-      baseState.log.push(log);
+      if (log) {
+        baseState.log.push(log);
+      }
     }
     // Perform value constraints.
     for (const quantityName in baseState.quantities) {
