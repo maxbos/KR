@@ -77,7 +77,7 @@ class App extends Component {
       'digraph  {',
       'node [style="filled"]');
     for (let stateId in states) {
-      let state = states[stateId];
+      let state = this.convertMagnitudesAndDerivatives(states[stateId]);
       let inflow = state.quantities['Inflow'].magnitude;
       let dInflow = state.quantities['Inflow'].derivative;
       let volume = state.quantities['Volume'].magnitude;
@@ -89,15 +89,28 @@ class App extends Component {
       );
       for (let child in state.childIds) {
         let childId = state.childIds[child];
+        let log = states[childId].log;
         connections.push(`state${stateId} -> state${childId} [label=<
           <table style="font-size:80%" border="0" cellborder="1" cellspacing="0">
-            <tr><td bgcolor="yellow"><font POINT-SIZE="8">testst</font></td></tr>
+            <tr><td bgcolor="yellow"><font POINT-SIZE="8">${log.join('\n')}</font></td></tr>
           </table>>]\n`);
       }
     }
     dot.push(...connections);
     dot.push('}');
     return [dot];
+  }
+
+  convertMagnitudesAndDerivatives(state) {
+    let types = ['Inflow', 'Volume', 'Outflow']
+    for (let idx in types)  {
+      let type = types[idx];
+      let mag = state.quantities[type].magnitude;
+      let der = state.quantities[type].derivative;
+      state.quantities[type].magnitude = mag === 1 ? '+' : mag === 2 ? 'max' : mag;
+      state.quantities[type].derivative = der === -1 ? '-' : der === 0 ? '0' : '+';
+    }
+    return state
   }
 
   renderDots(animateStates) {
