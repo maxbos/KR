@@ -30,17 +30,17 @@ class App extends Component {
       '    inflow [label="Inflow🚰"]',
       '    volume [label="Volume🛁"]',
       '    outflow [label="Outflow🌊"]',
-      '    explanation [label="Explanation:\n'+ log + '" shape=box fillcolor="#FFFFFF"]');
+      `    explanation [label="State: ${stateId}\nExplanation:\n${log}" shape=box fillcolor="#FFFFFF"]`);
 
       for (let idx in types)  {
         let type = types[idx];
-        let maxValue = (type === 'Volume' || type === 'Outflow') ? 'max\n' : '';
-        if (state.quantities[type].derivative === 'max') {
-          dot.push(type.toLowerCase() + 'derivative [label="Derivative:\n➡️max\n+\n0" shape=box fillcolor="#BB8FCE"]');
-        } else if (state.quantities[type].derivative === '+') {
-          dot.push(`${type.toLowerCase()}derivative [label="Derivative:\n${maxValue}➡️+\n0" shape=box fillcolor="#BB8FCE"]`)
+        let maxValue = (type === 'Volume' || type === 'Outflow') ? '+\n' : '';
+        if (state.quantities[type].derivative === '+') {
+          dot.push(type.toLowerCase() + 'derivative [label="Derivative:\n➡️+\n0\n-" shape=box fillcolor="#BB8FCE"]');
         } else if (state.quantities[type].derivative === '0') {
-          dot.push(`${type.toLowerCase()}derivative [label="Derivative:\n${maxValue}+\n➡️0" shape=box fillcolor="#BB8FCE"]`)
+          dot.push(`${type.toLowerCase()}derivative [label="Derivative:\n${maxValue}➡️0\n-" shape=box fillcolor="#BB8FCE"]`)
+        } else if (state.quantities[type].derivative === '-') {
+          dot.push(`${type.toLowerCase()}derivative [label="Derivative:\n${maxValue}0\n➡️-" shape=box fillcolor="#BB8FCE"]`)
         }
         if (state.quantities[type].magnitude === 'max') {
           dot.push(type.toLowerCase() + 'magnitude [label="Magnitude:\n➡️max\n+\n0" shape=box fillcolor="#FAAC58"]')
@@ -108,7 +108,7 @@ class App extends Component {
         let mag = state.quantities[type].magnitude;
         let der = state.quantities[type].derivative;
         state.quantities[type].magnitude = mag === 1 ? '+' : mag === 2 ? 'max' : mag.toString();
-        state.quantities[type].derivative = der === -1 ? '0' : der === 0 ? '+' : 'max';
+        state.quantities[type].derivative = der === -1 ? '-' : der === 0 ? '0' : '+';
       }
     }
     return states
