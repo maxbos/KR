@@ -118,14 +118,26 @@ class App extends Component {
   }
 
   renderDots(animateStates) {
+    const delay = {
+      animateStates,
+      counter: 0,
+      f() {
+        const animateddelay = (this.counter > 3) ? 5000 : 0;
+        this.counter++;
+        return this.animateStates ? animateddelay : 0;
+      },
+    };
+    const unbounded = delay.f;
+    const bounded = unbounded.bind(delay);
+
     var dots = animateStates ? this.getAnimatedDots() : this.getRegularDots();
     var dotIndex = 0;
     var graphviz = d3.select("#graph").graphviz()
         .transition(function () {
-            return d3.transition("main")
-                .ease(d3.easeLinear)
-                .delay(5000)
-                .duration(500);
+          return d3.transition("main")
+              .ease(d3.easeLinear)
+              .delay(bounded)
+              .duration(500);
         })
         .on("initEnd", render);
     
