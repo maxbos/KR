@@ -9,10 +9,52 @@ class App extends Component {
     super(props);
     this.state = {
       states: this.convertMagnitudesAndDerivatives(new World().stateTree.states),
-      animateStates: false,
+      animateStates: true,
     };
     console.log(this.state.states);
     this.handleInputChange = this.handleInputChange.bind(this);
+  }
+
+  deriveExplanation(state) {
+    let explanation = ''
+    let im = state.quantities['Inflow'].magnitude;
+    let id = state.quantities[['Inflow']].derivative;
+    let vm = state.quantities['Volume'].magnitude;
+    let vd = state.quantities['Volume'].derivative;
+    let om = state.quantities['Outflow'].magnitude;
+    let od = state.quantities['Outflow'].magnitude;
+    if (im === '0' && vm === '0' && om === '0') {
+      explanation += "The bathtub is empty ";
+    }
+    if (id === '+') {
+      explanation += "An increasing amount of water is flowing into the bathtub\n";
+      if (vm === '+') {
+        explanation += "and the water level is rising.\n";
+      } else if (vm === '0') {
+        explanation += "but the water level is steady.\n";
+      } else if (vm === '-') {
+        explanation += "but the water level is declining.\n";
+      }
+    }
+    else if (im === '+') {
+      explanation += "Water is flowing into the baththub ";
+      if (vm === '+') {
+        explanation += "and the water level is rising.\n";
+      } else if (vm === '0') {
+        explanation += "but the water level is steady.\n";
+      } else if (vm === '-') {
+        explanation += "but the water level is declining.\n";
+      }
+    }
+    if (od === '+' && vm !== '+') {
+      explanation += "Because an increasing amount of water is flowing out of the bathtub\n";
+    } else if ((om === 'max' || om === '+') && vm !== '+') {
+      explanation += "Because water is flowing out of the bathtub\n";
+    }
+    if (vm === 'max') {
+      explanation += "The bathtub has reached it maximum volume\n and therefore maximum outflow.";
+    }
+    return explanation;
   }
 
   getAnimatedDots() {
@@ -21,7 +63,8 @@ class App extends Component {
     let dots = []
     for (let stateId in states) {
       let state = states[stateId];
-      let log = state.log ? state.log.join("\n") : "Initial state"; 
+      // let log = state.log ? state.log.join("\n") : "Initial state"; 
+      let log = this.deriveExplanation(state);
       let dot = []
       dot.push('digraph  {',
       '    node [style="filled"]',
@@ -124,7 +167,7 @@ class App extends Component {
       animateStates,
       counter: 0,
       f() {
-        const animateddelay = (this.counter > 3) ? 5000 : 0;
+        const animateddelay = (this.counter > 3) ? 2000 : 0;
         this.counter++;
         return this.animateStates ? animateddelay : 0;
       },
