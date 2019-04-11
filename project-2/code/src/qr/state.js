@@ -7,7 +7,6 @@ class State {
   constructor(id, quantities, log) {
     this.id = id;
     this.quantities = quantities;
-    this.childIds = [];
     this.children = [];
     this.log = this.cleanLogs(log);
     for (const q in this.quantities) {
@@ -39,9 +38,7 @@ class State {
    * @param {Array} child 
    */
   addChildConnection([childId, log]) {
-    // if (this.childIds.includes(childId)) return;
-    // this.childIds.push(childId);
-    this.children.push([childId, log]);
+    this.children.push([childId, this.cleanLogs(log)]);
   }
 
   /**
