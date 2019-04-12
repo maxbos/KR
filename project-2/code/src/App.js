@@ -23,38 +23,32 @@ class App extends Component {
     let vd = state.quantities['Volume'].derivative;
     let om = state.quantities['Outflow'].magnitude;
     let od = state.quantities['Outflow'].magnitude;
-    if (im === '0' && vm === '0' && om === '0') {
-      explanation += "The bathtub is empty ";
-    }
-    if (id === '+') {
-      explanation += "An increasing amount of water is flowing into the bathtub\n";
-      if (vd === '+') {
-        explanation += "and the water level is rising.\n";
-      } else if (vd === '0') {
-        explanation += "but the water level is steady.\n";
-      } else if (vd === '-') {
-        explanation += "but the water level is declining.\n";
+    if (vm === '0') {
+      explanation += "The volume in the bathtub is empty\n";
+      if (im === '0' && id === '0') {
+        explanation += "because no water is flowing in.\n";
+      } else if (om !== '0' || od !== '0') {
+        explanation += "because water outflow was higher than inflow";
+      } else {
+        explanation += "but water starts flowing in";
       }
-    }
-    else if (im === '+') {
-      explanation += "Water is flowing into the baththub ";
-      if (vd === '+') {
-        explanation += "and the water level is rising.\n";
-      } else if (vd === '0') {
-        explanation += "but the water level is steady.\n";
-      } else if (vd === '-') {
-        explanation += "but the water level is declining.\n";
+    } else if (vd === '+') {
+      explanation += "The volume in the bathtub is rising\n";
+      if (im !== '0' && om === '0') {
+        explanation += "because water is flowing in and no water is flowing out";
+      } else {
+        explanation += "because water is flowing in faster than flowing out";
       }
-    }
-    if (od === '+' && vd !== '+') {
-      explanation += "Because an increasing amount of water is flowing out of the bathtub\n";
-    } else if ((om === 'max' || om === '+') && vd !== '+') {
-      explanation += "Because water is flowing out of the bathtub\n";
-    } else if (od === '+' && vd === '+') {
-      explanation += "And an increasing amount of water is flowing out of the bathtub, but less than the inflow\n";
+    } else if (vd === '0') {
+      explanation += "The volume in the bathtub is steady\n";
+      explanation += "because water is flowing in and out in the same pace";
+    } else if (vd === '-') {
+      explanation += "The volume in the bathtub is declining\n";
+      explanation += "because water is flowing out faster than flowing in";
     }
     if (vm === 'max') {
-      explanation += "The bathtub has reached it maximum volume\n and therefore maximum outflow.";
+      explanation += "\nAnd outflow has reached it's maximum\n";
+      explanation += "because volume has reached it's maximum";
     }
     return explanation;
   }
@@ -65,7 +59,6 @@ class App extends Component {
     let dots = []
     for (let stateId in states) {
       let state = states[stateId];
-      // let log = state.log ? state.log.join("\n") : "Initial state"; 
       let log = this.deriveExplanation(state);
       let dot = []
       dot.push('digraph  {',
@@ -112,7 +105,6 @@ class App extends Component {
       '    ',
       '}' );
       dots.push(dot);
-      // break;
     }
     return dots;
   }
@@ -184,6 +176,10 @@ class App extends Component {
       totalMemory: 1073741824,
       fit: true,
       scale: animateStates ? 1 : 0.5,
+      tweenShapes: false,
+      tweenPaths: false,
+      convertEqualSidedPolygons: false,
+      tweenPrecision: 10,
     })
         .transition(function () {
           return d3.transition("main")
@@ -229,6 +225,9 @@ class App extends Component {
         <form>
           <label>Animate states</label>
           <input name="animateStates" type="checkbox" value={this.state.animateStates} onChange={this.handleInputChange}/>
+          {this.state.animateStates ? '' : 
+            <p>Note that the graph is quite large and therefore slow, you can access it <a href="graph.png">here</a> as PNG.</p>
+          }
         </form>
         <div id="graph" style={{textAlign: "center"}} />
       </div>
