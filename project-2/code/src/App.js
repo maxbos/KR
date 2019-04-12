@@ -182,6 +182,8 @@ class App extends Component {
     const div = d3.select("#graph");
     var graphviz = div.graphviz({
       totalMemory: 1073741824,
+      fit: true,
+      scale: animateStates ? 1 : 0.5,
     })
         .transition(function () {
           return d3.transition("main")

@@ -53,18 +53,6 @@ class StateTree {
     if (parentId === childId) return;
     this.states[parentId].addChildConnection([childId, log]);
   }
-
-  /**
-   * Add the ID of a given child state to each parent state
-   * of a given list of parent state IDs.
-   * @param {Array} parentIds array of numbers
-   * @param {Number} childId 
-   */
-  addConnections(parentIds, childId) {
-    for (const parentId in parentIds) {
-      this.addConnection(parentId, childId);
-    }
-  }
 }
 
 export default StateTree;
