@@ -9,7 +9,7 @@ class App extends Component {
     super(props);
     this.state = {
       states: this.convertMagnitudesAndDerivatives(new World().stateTree.states),
-      animateStates: true,
+      animateStates: false,
     };
     console.log(this.state.states);
     this.handleInputChange = this.handleInputChange.bind(this);
@@ -28,28 +28,30 @@ class App extends Component {
     }
     if (id === '+') {
       explanation += "An increasing amount of water is flowing into the bathtub\n";
-      if (vm === '+') {
+      if (vd === '+') {
         explanation += "and the water level is rising.\n";
-      } else if (vm === '0') {
+      } else if (vd === '0') {
         explanation += "but the water level is steady.\n";
-      } else if (vm === '-') {
+      } else if (vd === '-') {
         explanation += "but the water level is declining.\n";
       }
     }
     else if (im === '+') {
       explanation += "Water is flowing into the baththub ";
-      if (vm === '+') {
+      if (vd === '+') {
         explanation += "and the water level is rising.\n";
-      } else if (vm === '0') {
+      } else if (vd === '0') {
         explanation += "but the water level is steady.\n";
-      } else if (vm === '-') {
+      } else if (vd === '-') {
         explanation += "but the water level is declining.\n";
       }
     }
-    if (od === '+' && vm !== '+') {
+    if (od === '+' && vd !== '+') {
       explanation += "Because an increasing amount of water is flowing out of the bathtub\n";
-    } else if ((om === 'max' || om === '+') && vm !== '+') {
+    } else if ((om === 'max' || om === '+') && vd !== '+') {
       explanation += "Because water is flowing out of the bathtub\n";
+    } else if (od === '+' && vd === '+') {
+      explanation += "And an increasing amount of water is flowing out of the bathtub, but less than the inflow\n";
     }
     if (vm === 'max') {
       explanation += "The bathtub has reached it maximum volume\n and therefore maximum outflow.";
@@ -167,7 +169,7 @@ class App extends Component {
       animateStates,
       counter: 0,
       f() {
-        const animateddelay = (this.counter > 3) ? 2000 : 0;
+        const animateddelay = (this.counter > 3) ? 5000 : 0;
         this.counter++;
         return this.animateStates ? animateddelay : 0;
       },
